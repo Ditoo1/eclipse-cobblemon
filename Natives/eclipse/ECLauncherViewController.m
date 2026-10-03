@@ -241,6 +241,12 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
         self.nameField.text = @(user);
         [self loginOffline];
     }
+    if (getenv("EC_AUTOPLAY")) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            ECLog(@"Teste automático: a carregar em Jogar");
+            [self play];
+        });
+    }
     if (!sheet) return;
     NSString *kind = @(sheet);
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
@@ -729,6 +735,11 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
 - (void)invokeAfterJITEnabled:(void (^)(void))handler {
     BOOL hasTrollStoreJIT = getEntitlementValue(@"jb.pmap_cs.custom_trust");
     if (isJITEnabled(false)) {
+        handler();
+        return;
+    } else if (getenv("SIMULATOR_DEVICE_NAME")) {
+        // En el simulador la app corre como proceso del Mac: no hay JIT que activar.
+        ECLog(@"Simulador: o JIT não é necessário");
         handler();
         return;
     } else if (hasTrollStoreJIT) {
