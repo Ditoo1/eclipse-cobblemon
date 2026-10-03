@@ -86,8 +86,10 @@
         progress.totalUnitCount = fileSize;
     }
     [self.progressList addObject:progress];
-    [self.progress addChild:progress withPendingUnitCount:fileSize];
+    // Sumar al total antes de añadir el hijo: si el hijo ya terminó (tamaño desconocido, se añade
+    // al acabar la descarga), el padre se daría por terminado antes de tiempo.
     self.progress.totalUnitCount += fileSize;
+    [self.progress addChild:progress withPendingUnitCount:fileSize];
     self.textProgress.totalUnitCount = self.progress.totalUnitCount;
 }
 

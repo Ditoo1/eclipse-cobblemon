@@ -630,13 +630,15 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
         for (NSProgress *p in [task.progressList copy]) {
             if (p.finished || p.fractionCompleted >= 1) done++;
         }
+        // Sin metadatos aún no ha terminado: el JSON de la versión todavía se está procesando.
+        BOOL complete = finished && task.metadata != nil;
         if (total > 0) {
             self.stage = ECStageFiles;
             self.filesTotal = total;
             self.filesDone = MIN(done, total);
             self.progress = fraction;
         }
-        if (finished) {
+        if (complete) {
             self.taskFinished = YES;
             [self stopObserving:task];
             [self downloadFinished:task];
