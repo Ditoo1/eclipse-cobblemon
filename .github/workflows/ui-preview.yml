@@ -36,6 +36,16 @@ jobs:
           export PATH=/opt/homebrew/opt/make/libexec/gnubin:$PATH
           gmake -j$(sysctl -n hw.ncpu) payload PLATFORM=7 SLIMMED_ONLY=1 BOOTJDK="$JAVA_HOME/bin"
           APPDIR=artifacts/Payload/AngelAuraAmethyst.app
+          # Marcar el bundle como build de simulador de iPhone (VibeView y otros lo leen del Info.plist)
+          PL="$APPDIR/Info.plist"
+          SDKVER=$(xcrun --sdk iphonesimulator --show-sdk-version)
+          plutil -remove CFBundleSupportedPlatforms "$PL" 2>/dev/null || true
+          plutil -insert CFBundleSupportedPlatforms -json '["iPhoneSimulator"]' "$PL"
+          plutil -replace DTPlatformName -string iphonesimulator "$PL"
+          plutil -replace DTSDKName -string "iphonesimulator$SDKVER" "$PL"
+          plutil -replace DTPlatformVersion -string "$SDKVER" "$PL"
+          plutil -replace UIDeviceFamily -json '[1,2]' "$PL"
+          plutil -p "$PL" | grep -E "SupportedPlatforms|DTPlatform|DTSDK|UIDeviceFamily" -A2
           # El simulador no acepta las firmas/entitlements de ldid: firma ad hoc sin entitlements
           find "$APPDIR" \( -name '*.dylib' -o -name '*.framework' \) -maxdepth 2 -print0 | xargs -0 -I{} codesign --force --sign - --timestamp=none {} || true
           codesign --force --sign - --timestamp=none "$APPDIR"
