@@ -80,8 +80,18 @@ jobs:
           UDID=${{ steps.sim.outputs.udid }}
           APP=dev.eclipsecobblemon.ios
           mkdir -p out
-          SIMCTL_CHILD_EC_PREVIEW_USER=DitoBlan SIMCTL_CHILD_EC_AUTOPLAY=1 \
-            xcrun simctl launch --stdout="$PWD/out/stdout.txt" --stderr="$PWD/out/stderr.txt" "$UDID" "$APP" || true
+          # Igual que StikDebug en el iPhone: con un depurador conectado iOS permite el código JIT.
+          OUT=$(SIMCTL_CHILD_EC_PREVIEW_USER=DitoBlan SIMCTL_CHILD_EC_AUTOPLAY=1 \
+            xcrun simctl launch -w --stdout="$PWD/out/stdout.txt" --stderr="$PWD/out/stderr.txt" "$UDID" "$APP")
+          echo "$OUT"
+          PID=$(echo "$OUT" | awk '{print $NF}')
+          { printf '%s\n' \
+              'settings set platform.plugin.darwin.ignored-exceptions EXC_BAD_ACCESS|EXC_BAD_INSTRUCTION|EXC_ARITHMETIC' \
+              "process attach -p $PID" \
+              'process handle -p true -s false -n false SIGSEGV SIGBUS SIGILL SIGUSR1 SIGUSR2 SIGPIPE SIGALRM SIGXCPU' \
+              'continue'; sleep 3000; } | lldb > out/lldb.txt 2>&1 &
+          sleep 15
+          head -40 out/lldb.txt || true
           # Capturas cada 10 s durante ~25 minutos (descarga + arranque del juego)
           for i in $(seq -w 1 150); do
             sleep 10
@@ -93,6 +103,7 @@ jobs:
             fi
           done
           tail -60 out/stderr.txt || true
+          tail -60 out/lldb.txt || true
 
       - name: Collect logs
         if: always()
