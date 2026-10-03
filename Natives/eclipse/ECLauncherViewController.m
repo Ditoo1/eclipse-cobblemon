@@ -470,6 +470,12 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     BOOL changed = ![mine[@"lastVersionId"] isEqualToString:ECVersion] || ![profiles.selectedProfileName isEqualToString:ECProfileName];
     mine[@"name"] = ECProfileName;
     mine[@"lastVersionId"] = ECVersion;
+    // Simulador: sin depurador, las páginas JIT espejo se consideran inválidas; probar sin espejo.
+    if (getenv("SIMULATOR_DEVICE_NAME")) {
+        NSString *args = getenv("EC_JVM_ARGS") ? @(getenv("EC_JVM_ARGS")) : @"-XX:-MirrorMappedCodeCache";
+        changed = changed || ![mine[@"javaArgs"] isEqualToString:args];
+        mine[@"javaArgs"] = args;
+    }
     all[ECProfileName] = mine;
     profiles.profileDict[@"profiles"] = all;
     if (changed) {
