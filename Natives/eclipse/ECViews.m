@@ -476,7 +476,7 @@ UIStackView *ECRow(NSArray<UIView *> *views, CGFloat spacing) {
     NSLayoutConstraint *fit = [_scroll.heightAnchor constraintEqualToAnchor:_stack.heightAnchor constant:18 + 28];
     UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(pan:)];
     [grab addGestureRecognizer:pan];
-    fit.priority = UILayoutPriorityDefaultHigh;
+    fit.priority = 700; // por debajo de la resistencia a compresión del contenido
     [NSLayoutConstraint activateConstraints:@[
         [_scrim.topAnchor constraintEqualToAnchor:self.topAnchor],
         [_scrim.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],

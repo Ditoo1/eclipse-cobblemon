@@ -1269,6 +1269,11 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     hero.contentMode = UIViewContentModeScaleAspectFill;
     hero.transform = CGAffineTransformMakeScale(1.08, 1.08);
     hero.translatesAutoresizingMaskIntoConstraints = NO;
+    // La imagen no impone su tamaño: la tarjeta ocupa el espacio que dejan los demás
+    for (NSNumber *axis in @[@(UILayoutConstraintAxisHorizontal), @(UILayoutConstraintAxisVertical)]) {
+        [hero setContentCompressionResistancePriority:1 forAxis:axis.integerValue];
+        [hero setContentHuggingPriority:1 forAxis:axis.integerValue];
+    }
     [card addSubview:hero];
     self.heroImage = hero;
     CAGradientLayer *shade = [CAGradientLayer layer];
@@ -1318,6 +1323,10 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     self.statusTitle = ECLabel(@"", 15, 600, ECIvory);
     self.statusSub = ECLabel(@"", 12.5, 400, ECMuted);
     self.statusTitle.textAlignment = self.statusSub.textAlignment = NSTextAlignmentCenter;
+    self.statusTitle.text = self.statusSub.text = @" ";
+    for (UILabel *l in @[self.statusTitle, self.statusSub]) {
+        [l setContentCompressionResistancePriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisVertical];
+    }
     self.stars = [ECStarStrip new];
     self.stepsLabel = [UILabel new];
     self.stepsLabel.textAlignment = NSTextAlignmentCenter;
