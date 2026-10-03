@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build:
     name: Build IPA (iOS)
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 120
     steps:
       - name: Checkout repository
@@ -34,6 +34,7 @@ jobs:
         run: |
           brew install ldid make wget
           cmake --version
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || xcode-select -p)" || true
           xcodebuild -version
 
       - name: Build

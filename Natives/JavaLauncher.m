@@ -1,5 +1,6 @@
 #include <dirent.h>
 #include <dlfcn.h>
+#include <mach/mach.h>
 #include <errno.h>
 #include <libgen.h>
 #include <spawn.h>
