@@ -85,11 +85,13 @@ jobs:
             xcrun simctl launch -w --stdout="$PWD/out/stdout.txt" --stderr="$PWD/out/stderr.txt" "$UDID" "$APP")
           echo "$OUT"
           PID=$(echo "$OUT" | awk '{print $NF}')
+          sudo DevToolsSecurity -enable || true
+          ps -o pid,stat,comm -p "$PID" || true
           { printf '%s\n' \
               'settings set platform.plugin.darwin.ignored-exceptions EXC_BAD_ACCESS|EXC_BAD_INSTRUCTION|EXC_ARITHMETIC' \
               "process attach -p $PID" \
               'process handle -p true -s false -n false SIGSEGV SIGBUS SIGILL SIGUSR1 SIGUSR2 SIGPIPE SIGALRM SIGXCPU' \
-              'continue'; sleep 3000; } | lldb > out/lldb.txt 2>&1 &
+              'continue'; sleep 3000; } | sudo lldb > out/lldb.txt 2>&1 &
           sleep 15
           head -40 out/lldb.txt || true
           # Capturas cada 10 s durante ~25 minutos (descarga + arranque del juego)
