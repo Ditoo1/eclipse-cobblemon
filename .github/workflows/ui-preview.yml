@@ -40,6 +40,18 @@ jobs:
           find "$APPDIR" \( -name '*.dylib' -o -name '*.framework' \) -maxdepth 2 -print0 | xargs -0 -I{} codesign --force --sign - --timestamp=none {} || true
           codesign --force --sign - --timestamp=none "$APPDIR"
           vtool -show-build "$APPDIR/AngelAuraAmethyst" | head -20
+          # .app para simuladores en la nube (zip y tar.gz que conservan permisos y enlaces)
+          mkdir -p simapp
+          ditto -c -k --sequesterRsrc --keepParent "$APPDIR" simapp/EclipseCobblemon-simulator.zip
+          tar -czf simapp/EclipseCobblemon-simulator.tar.gz -C artifacts/Payload AngelAuraAmethyst.app
+          ls -la simapp
+
+      - name: Upload simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: EclipseCobblemon-simulator-app
+          path: simapp/
+          compression-level: 0
 
       - name: Boot simulator
         id: sim
