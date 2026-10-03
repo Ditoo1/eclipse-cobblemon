@@ -86,8 +86,10 @@ jobs:
           for i in $(seq -w 1 150); do
             sleep 10
             xcrun simctl io "$UDID" screenshot "out/shot-$i.png" >/dev/null 2>&1 || true
-            if ! xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | grep -q "$APP"; then
-              echo "La app se ha cerrado en la captura $i"; break
+            if ! xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | grep -q "UIKitApplication:$APP"; then
+              echo "La app se ha cerrado en la captura $i ($(date +%T))"
+              xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | grep -i "eclipse\|UIKitApplication" || true
+              break
             fi
           done
           tail -60 out/stderr.txt || true
@@ -107,7 +109,9 @@ jobs:
           fi
           sleep 20
           mkdir -p out/crash
-          find ~/Library/Logs/DiagnosticReports /Library/Logs/DiagnosticReports -newer out/stdout.txt -type f 2>/dev/null | while read -r f; do cp "$f" out/crash/ 2>/dev/null || true; done
+          find ~/Library/Logs/DiagnosticReports /Library/Logs/DiagnosticReports -mmin -60 -type f 2>/dev/null | while read -r f; do cp "$f" out/crash/ 2>/dev/null || true; done
+          # Motivo de terminación según el sistema (runningboard / SpringBoard)
+          xcrun simctl spawn "$UDID" log show --last 40m --style compact --predicate 'eventMessage CONTAINS[c] "eclipsecobblemon" OR eventMessage CONTAINS[c] "AngelAuraAmethyst"' 2>/dev/null | grep -i "termin\|exit\|crash\|kill\|death\|signal\|jetsam" | tail -40 | tee out/termination.txt || true
           ls -la out/crash
           for f in out/crash/*; do [ -f "$f" ] && head -c 6000 "$f"; done || true
           xcrun simctl spawn "$UDID" log show --last 40m --predicate 'process == "AngelAuraAmethyst"' --style compact 2>/dev/null | grep -v "CFNetwork\|com.apple.network\|caulk" | tail -3000 > out/oslog.txt || true
