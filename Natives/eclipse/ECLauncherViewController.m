@@ -226,9 +226,43 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     [self installControls];
     [self ensureProfile];
     [self applyAccountEnvironment];
+    [self showLoggedIn:self.account != nil animated:NO];
     [self refreshAll];
     [self loadSkin];
     [self refreshMicrosoftSession];
+    [self applyPreviewEnvironment];
+}
+
+/// Solo para las capturas automáticas del CI (simulador): EC_PREVIEW_USER y EC_PREVIEW_SHEET.
+- (void)applyPreviewEnvironment {
+    const char *user = getenv("EC_PREVIEW_USER");
+    const char *sheet = getenv("EC_PREVIEW_SHEET");
+    if (user && !self.account) {
+        self.nameField.text = @(user);
+        [self loginOffline];
+    }
+    if (!sheet) return;
+    NSString *kind = @(sheet);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if ([kind isEqualToString:@"settings"] || [kind isEqualToString:@"log"]) {
+            self.showLog = [kind isEqualToString:@"log"];
+            [self openSettings];
+        } else if ([kind isEqualToString:@"profile"] || [kind isEqualToString:@"skin"]) {
+            self.profileTab = [kind isEqualToString:@"skin"] ? 1 : 0;
+            [self openProfile];
+        } else if ([kind isEqualToString:@"progress"]) {
+            self.busy = YES;
+            self.stage = ECStageFiles;
+            self.filesDone = 1234;
+            self.filesTotal = 3412;
+            self.progress = 0.42;
+            [self refreshAll];
+        } else if ([kind isEqualToString:@"launching"]) {
+            self.busy = YES;
+            self.stage = ECStageLaunching;
+            [self refreshAll];
+        }
+    });
 }
 
 - (void)viewDidAppear:(BOOL)animated {

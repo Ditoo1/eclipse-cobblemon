@@ -1,0 +1,82 @@
+name: UI preview (simulator)
+
+# Compila la app para el simulador de iOS y guarda capturas de cada pantalla,
+# para revisar la interfaz sin un iPhone.
+on:
+  push:
+    paths:
+      - 'Natives/eclipse/**'
+      - 'Natives/resources/**'
+      - '.github/workflows/ui-preview.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ui-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '8'
+
+      - name: Install build tools
+        run: brew install ldid make wget
+
+      - name: Build for iOS Simulator
+        run: |
+          export PATH=/opt/homebrew/opt/make/libexec/gnubin:$PATH
+          gmake -j$(sysctl -n hw.ncpu) payload PLATFORM=7 SLIMMED_ONLY=1 BOOTJDK="$JAVA_HOME/bin"
+          ls artifacts/Payload
+
+      - name: Boot simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)['devices']
+          c=[x for k,v in d.items() if 'iOS' in k for x in v if x['name'].startswith('iPhone') and 'Pro' in x['name'] and 'Max' not in x['name']]
+          c=c or [x for k,v in d.items() if 'iOS' in k for x in v if x['name'].startswith('iPhone')]
+          print(c[-1]['udid'])")
+          echo "udid=$UDID" >> $GITHUB_OUTPUT
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "1:26" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
+          xcrun simctl install "$UDID" artifacts/Payload/AngelAuraAmethyst.app
+
+      - name: Capture screens
+        run: |
+          UDID=${{ steps.sim.outputs.udid }}
+          APP=dev.eclipsecobblemon.ios
+          mkdir -p shots
+          shot() {
+            name=$1; shift
+            xcrun simctl terminate "$UDID" "$APP" 2>/dev/null || true
+            env "$@" xcrun simctl launch "$UDID" "$APP" || true
+            sleep 9
+            xcrun simctl io "$UDID" screenshot "shots/$name.png" || true
+          }
+          shot 1-acesso
+          shot 2-inicio SIMCTL_CHILD_EC_PREVIEW_USER=DitoBlan
+          shot 3-perfil SIMCTL_CHILD_EC_PREVIEW_USER=DitoBlan SIMCTL_CHILD_EC_PREVIEW_SHEET=profile
+          shot 4-skin SIMCTL_CHILD_EC_PREVIEW_USER=DitoBlan SIMCTL_CHILD_EC_PREVIEW_SHEET=skin
+          shot 5-definicoes SIMCTL_CHILD_EC_PREVIEW_USER=DitoBlan SIMCTL_CHILD_EC_PREVIEW_SHEET=settings
+          shot 6-registo SIMCTL_CHILD_EC_PREVIEW_USER=DitoBlan SIMCTL_CHILD_EC_PREVIEW_SHEET=log
+          shot 7-progresso SIMCTL_CHILD_EC_PREVIEW_USER=DitoBlan SIMCTL_CHILD_EC_PREVIEW_SHEET=progress
+          shot 8-a-entrar SIMCTL_CHILD_EC_PREVIEW_USER=DitoBlan SIMCTL_CHILD_EC_PREVIEW_SHEET=launching
+          ls -la shots
+          xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "AngelAuraAmethyst"' --style compact 2>/dev/null | grep -iE "eclipse|error|exception|crash" | tail -80 || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: shots/*.png
+          if-no-files-found: error
