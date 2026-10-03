@@ -277,7 +277,8 @@ JITFlags DeviceGetJITFlags(BOOL refresh) {
                 cachedFlags |= JIT_FLAG_FORCE_MIRRORED;
             }
         }
-        if (DeviceHasTXMReal()) {
+        // Eclipse Cobblemon: el simulador corre como proceso del Mac (sin TXM) aunque el chip lo tenga.
+        if (!getenv("SIMULATOR_DEVICE_NAME") && DeviceHasTXMReal()) {
             cachedFlags |= JIT_FLAG_HAS_TXM;
         }
         
