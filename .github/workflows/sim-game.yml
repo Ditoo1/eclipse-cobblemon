@@ -82,9 +82,9 @@ jobs:
           mkdir -p out
           SIMCTL_CHILD_EC_PREVIEW_USER=DitoBlan SIMCTL_CHILD_EC_AUTOPLAY=1 \
             xcrun simctl launch --stdout="$PWD/out/stdout.txt" --stderr="$PWD/out/stderr.txt" "$UDID" "$APP" || true
-          # Capturas cada 30 s durante 25 minutos (descarga + arranque del juego)
-          for i in $(seq -w 1 50); do
-            sleep 30
+          # Capturas cada 10 s durante ~25 minutos (descarga + arranque del juego)
+          for i in $(seq -w 1 150); do
+            sleep 10
             xcrun simctl io "$UDID" screenshot "out/shot-$i.png" >/dev/null 2>&1 || true
             if ! xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | grep -q "$APP"; then
               echo "La app se ha cerrado en la captura $i"; break
@@ -105,9 +105,13 @@ jobs:
             cp -R "$DATA/Documents/instances" out/instances 2>/dev/null || true
             rm -rf out/instances/*/assets out/instances/*/libraries out/instances/*/versions 2>/dev/null || true
           fi
-          ls ~/Library/Logs/DiagnosticReports 2>/dev/null | tail -5
-          cp ~/Library/Logs/DiagnosticReports/AngelAuraAmethyst* out/ 2>/dev/null || true
-          xcrun simctl spawn "$UDID" log show --last 30m --predicate 'process == "AngelAuraAmethyst"' --style compact 2>/dev/null | tail -400 > out/oslog.txt || true
+          sleep 20
+          mkdir -p out/crash
+          find ~/Library/Logs/DiagnosticReports /Library/Logs/DiagnosticReports -newer out/stdout.txt -type f 2>/dev/null | while read -r f; do cp "$f" out/crash/ 2>/dev/null || true; done
+          ls -la out/crash
+          for f in out/crash/*; do [ -f "$f" ] && head -c 6000 "$f"; done || true
+          xcrun simctl spawn "$UDID" log show --last 40m --predicate 'process == "AngelAuraAmethyst"' --style compact 2>/dev/null | grep -v "CFNetwork\|com.apple.network\|caulk" | tail -3000 > out/oslog.txt || true
+          tail -60 out/oslog.txt
           tail -80 out/latestlog.txt 2>/dev/null || true
 
       - uses: actions/upload-artifact@v4
