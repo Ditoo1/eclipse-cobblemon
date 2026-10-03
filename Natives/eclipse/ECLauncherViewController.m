@@ -473,6 +473,11 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     // Simulador: sin depurador, las páginas JIT espejo se consideran inválidas; probar sin espejo.
     if (getenv("SIMULATOR_DEVICE_NAME")) {
         NSString *args = getenv("EC_JVM_ARGS") ? @(getenv("EC_JVM_ARGS")) : @"-XX:-MirrorMappedCodeCache";
+        // JNA firmado para el simulador (lo incluye el workflow sim-game)
+        NSString *jna = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"jna"];
+        if ([NSFileManager.defaultManager fileExistsAtPath:jna]) {
+            args = [args stringByAppendingFormat:@" -Djna.boot.library.path=%@ -Djna.nounpack=true -Djna.nosys=false", jna];
+        }
         changed = changed || ![mine[@"javaArgs"] isEqualToString:args];
         mine[@"javaArgs"] = args;
     }

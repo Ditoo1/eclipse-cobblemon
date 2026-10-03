@@ -43,6 +43,16 @@ jobs:
           plutil -replace DTSDKName -string "iphonesimulator$SDKVER" "$PL"
           plutil -replace DTPlatformVersion -string "$SDKVER" "$PL"
           plutil -replace UIDeviceFamily -json '[1,2]' "$PL"
+          # JNA: Minecraft extrae la librería de Mac sin firma válida y el simulador la mata.
+          # Se incluye ya convertida al simulador y firmada; la app apunta JNA a esta carpeta.
+          mkdir -p "$APPDIR/jna" /tmp/jna
+          curl -sSLo /tmp/jna/jna.jar https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.13.0/jna-5.13.0.jar
+          (cd /tmp/jna && unzip -oq jna.jar 'com/sun/jna/darwin-aarch64/*')
+          cp /tmp/jna/com/sun/jna/darwin-aarch64/libjnidispatch.jnilib "$APPDIR/jna/libjnidispatch.jnilib"
+          lipo -thin arm64 "$APPDIR/jna/libjnidispatch.jnilib" -output "$APPDIR/jna/libjnidispatch.jnilib" 2>/dev/null || true
+          codesign --remove-signature "$APPDIR/jna/libjnidispatch.jnilib" || true
+          vtool -arch arm64 -set-build-version 7 14.0 16.0 -replace -output "$APPDIR/jna/libjnidispatch.jnilib" "$APPDIR/jna/libjnidispatch.jnilib"
+          vtool -show-build "$APPDIR/jna/libjnidispatch.jnilib"
           # Firma ad hoc de todos los Mach-O (incluido Java), de dentro hacia fuera
           find "$APPDIR" -type f | while read -r f; do
             if file "$f" | grep -q "Mach-O"; then codesign --force --sign - --timestamp=none "$f" 2>/dev/null || echo "no firmado: $f"; fi
