@@ -1,0 +1,81 @@
+/*
+  Eclipse Cobblemon: textos do Amethyst que continuam visíveis (menu do jogo,
+  editor de controlos e erros), em português de Portugal.
+*/
+
+"game.menu.force_close" = "Forçar o encerramento";
+"game.menu.confirm.force_close" = "Tem a certeza de que quer forçar o encerramento?";
+"game.menu.log_output" = "Registo";
+"game.menu.custom_controls" = "Controlos táteis";
+"game.note.airplay" = "O Minecraft está a ser mostrado num ecrã AirPlay";
+"game.title.exit_code" = "O jogo terminou com o código %d";
+
+"Play" = "Jogar";
+"Details" = "Detalhes";
+"Error" = "Erro";
+"OK" = "OK";
+"Cancel" = "Cancelar";
+"Done" = "Concluído";
+"Close" = "Fechar";
+
+"Copy" = "Copiar";
+"Edit" = "Editar";
+"Move" = "Mover";
+"Remove" = "Remover";
+"Resize" = "Redimensionar";
+"Always" = "Sempre";
+"In game" = "No jogo";
+"In menu" = "No menu";
+
+"custom_controls.button_edit.forward_lock" = "Bloquear avanço";
+"custom_controls.button_edit.name" = "Nome";
+"custom_controls.button_edit.size" = "Tamanho";
+"custom_controls.button_edit.mapping" = "Teclas";
+"custom_controls.button_edit.orientation" = "Orientação";
+"custom_controls.button_edit.toggleable" = "Alternável";
+"custom_controls.button_edit.mouse_pass" = "Passar ao rato";
+"custom_controls.button_edit.swipeable" = "Deslizável";
+"custom_controls.button_edit.bg_color" = "Cor de fundo";
+"custom_controls.button_edit.stroke_width" = "Largura do contorno (dp)";
+"custom_controls.button_edit.stroke_color" = "Cor do contorno";
+"custom_controls.button_edit.corner_radius" = "Arredondamento (%)";
+"custom_controls.button_edit.opacity" = "Opacidade (%)";
+"custom_controls.button_edit.visibility" = "Visibilidade";
+"custom_controls.button_menu.add_subbutton" = "Adicionar sub-botão";
+"custom_controls.control_menu.discard_changes" = "Descartar alterações";
+"custom_controls.control_menu.exit" = "Sair";
+"custom_controls.control_menu.exit.warn" = "Vai sair sem guardar as alterações.";
+"custom_controls.control_menu.save" = "Guardar";
+"custom_controls.control_menu.save.error.json" = "Erro no JSON";
+"custom_controls.control_menu.save.error.write" = "Erro ao guardar o ficheiro";
+"custom_controls.control_menu.load" = "Carregar";
+"custom_controls.control_menu.make_default" = "Usar por predefinição";
+"custom_controls.control_menu.safe_area" = "Área segura";
+"custom_controls.control_menu.add_button" = "Adicionar botão";
+"custom_controls.control_menu.add_drawer" = "Adicionar gaveta";
+"custom_controls.control_menu.add_joystick" = "Adicionar joystick";
+"custom_controls.error.incompatible" = "Esta versão de controlos (código %d) não é suportada.";
+"custom_controls.hint" = "Mantenha premido no ecrã para ver mais opções";
+
+"java.error.missing_runtime" = "O %@ precisa do Java %d ou superior.";
+"launcher.mcl.downloading_file" = "A transferir %@";
+"launcher.mcl.error_download" = "Não foi possível transferir %@: %@";
+"launcher.wait_jit.title" = "À espera do JIT";
+"launcher.wait_jit.message" = "O Minecraft precisa do JIT para funcionar. Ative-o com o StikDebug, SideStore ou AltStore.";
+"launcher.wait_jit_trollstore.message" = "Se continuar a ver esta mensagem, ative o esquema de URL no TrollStore.";
+
+"login.jit.checking" = "A verificar o JIT";
+"login.jit.enabled" = "JIT ativo";
+"login.jit.fail" = "Não foi possível ativar o JIT.";
+"login.jit.fail.title" = "Não foi possível ativar o JIT neste dispositivo.";
+"login.jit.fail.description_unsupported" = "Foi detetado um método de instalação não suportado. Reinstale a app com o SideStore, AltStore ou TrollStore.";
+"login.msa.progress.acquireAccessToken" = "(1/5) A obter o token de acesso";
+"login.msa.progress.acquireXBLToken" = "(2/5) A obter o token do Xbox Live";
+"login.msa.progress.acquireXSTS" = "A obter o XSTS";
+"login.msa.progress.acquireXboxProfile" = "(3/5) A obter o perfil Xbox";
+"login.msa.progress.acquireMCToken" = "(4/5) A obter o token do Minecraft";
+"login.msa.progress.checkMCProfile" = "(5/5) A verificar o perfil do Minecraft";
+"login.msa.error.xsts.noxboxacc" = "Esta conta Microsoft não tem perfil Xbox. Crie um perfil Xbox e tente outra vez.\nCódigo: 2148916233";
+"login.msa.error.xsts.noxbox" = "O Xbox Live não está disponível no seu país.\nCódigo: 2148916235";
+"login.msa.error.xsts.krverify" = "A conta tem de ser verificada pelos pais antes de continuar.\nCódigo: 2148916236 ou 2148916237";
+"login.msa.error.xsts.underage" = "A conta tem de estar associada a uma conta de adulto.\nCódigo: 2148916238";

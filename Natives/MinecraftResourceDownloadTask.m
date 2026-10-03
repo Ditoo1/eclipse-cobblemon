@@ -314,8 +314,9 @@
 
 // Check if the account has permission to download
 - (BOOL)checkAccessWithDialog:(BOOL)show {
-    // for now
-    BOOL accessible = [BaseAuthenticator.current.authData[@"username"] hasPrefix:@"Demo."] || BaseAuthenticator.current.authData[@"xboxGamertag"] != nil;
+    // Eclipse Cobblemon: las cuentas offline también pueden instalar el juego (igual que en Android),
+    // porque el servidor admite jugadores no premium.
+    BOOL accessible = BaseAuthenticator.current != nil;
     if (!accessible) {
         [self.progress cancel];
         if (show) {

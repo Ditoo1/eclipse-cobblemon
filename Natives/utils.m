@@ -104,6 +104,18 @@ NSError* saveJSONToFile(NSDictionary *dict, NSString *path) {
 }
 
 NSString* localize(NSString* key, NSString* comment) {
+    // Eclipse Cobblemon: a interface é sempre em português de Portugal (pt-PT.lproj),
+    // com os textos do Amethyst em inglês como recurso.
+    static NSBundle *ptBundle;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSString *path = [NSBundle.mainBundle pathForResource:@"pt-PT" ofType:@"lproj"];
+        ptBundle = path ? [NSBundle bundleWithPath:path] : nil;
+    });
+    NSString *pt = [ptBundle localizedStringForKey:key value:@"\x01" table:nil];
+    if (pt && ![pt isEqualToString:@"\x01"]) {
+        return pt;
+    }
     NSString *value = NSLocalizedString(key, nil);
     if (![NSLocale.preferredLanguages[0] isEqualToString:@"en"] && [value isEqualToString:key]) {
         NSString* path = [NSBundle.mainBundle pathForResource:@"en" ofType:@"lproj"];

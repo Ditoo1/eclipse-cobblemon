@@ -80,6 +80,7 @@ add_library(AFNetworking SHARED
 )
 target_link_libraries(AFNetworking
   "-framework CoreGraphics"
+  "-framework CoreText"
   "-framework CoreServices"
   "-framework Security"
   "-framework SystemConfiguration"
@@ -135,6 +136,11 @@ add_executable(AngelAuraAmethyst
   input/ControllerInput.m
   input/GyroInput.m
   input/KeyboardInput.m
+
+  eclipse/ECLauncherViewController.m
+  eclipse/ECSkin.m
+  eclipse/ECTheme.m
+  eclipse/ECViews.m
 
   AccountListViewController.m
   AppDelegate.m
@@ -196,6 +202,7 @@ target_link_libraries(AngelAuraAmethyst
   "-framework CoreMotion"
   "-framework GameController"
   "-framework IOKit"
+  "-framework PhotosUI"
   "-framework QuartzCore"
   "-framework UIKit"
   "-framework UniformTypeIdentifiers"

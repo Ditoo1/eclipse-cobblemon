@@ -6,6 +6,7 @@
 #import "LauncherSplitViewController.h"
 #import "PLLogOutputView.h"
 #import "SurfaceViewController.h"
+#import "eclipse/ECLauncherViewController.h"
 
 #include <objc/runtime.h>
 #include "ios_uikit_bridge.h"
@@ -131,7 +132,8 @@ void UIKit_returnToSplitView() {
         UIWindow *window = UIWindow.mainWindow;
 
         // Return from JavaGUIViewController
-        if ([window.rootViewController isKindOfClass:LauncherSplitViewController.class]) {
+        if ([window.rootViewController isKindOfClass:LauncherSplitViewController.class] ||
+            [window.rootViewController isKindOfClass:ECLauncherViewController.class]) {
             [currentVC() dismissViewControllerAnimated:YES completion:nil];
             return;
         }
@@ -146,7 +148,7 @@ void UIKit_returnToSplitView() {
                 window.rootViewController = tmpRootVC;
                 tmpRootVC = nil;
             } else {
-                window.rootViewController = [[LauncherSplitViewController alloc] initWithStyle:UISplitViewControllerStyleDoubleColumn];
+                window.rootViewController = [ECLauncherViewController new];
             }
             [window makeKeyAndVisible];
         }];
@@ -154,7 +156,8 @@ void UIKit_returnToSplitView() {
 }
 
 void launchInitialViewController(UIWindow *window) {
-    window.rootViewController = [[LauncherSplitViewController alloc] initWithStyle:UISplitViewControllerStyleDoubleColumn];
+    // Eclipse Cobblemon: interfaz propia; la de Amethyst queda en Definições → Registo → Modo avançado
+    window.rootViewController = [ECLauncherViewController new];
 #if 0
     if (getPrefBool(@"internal.internal_launch_on_boot")) {
         window.rootViewController = [[SurfaceViewController alloc] init];
