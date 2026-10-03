@@ -1,78 +1,55 @@
-# Angel Aura Amethyst (iOS)
-[![Development build](https://github.com/AngelAuraMC/Amethyst-iOS/actions/workflows/development.yml/badge.svg?branch=main)](https://github.com/AngelAuraMC/Amethyst-iOS/actions/workflows/development.yml)
-[![Crowdin](https://badges.crowdin.net/angelauramc/localized.svg)](https://crowdin.com/project/angelauramc)
-[![Discord](https://img.shields.io/discord/724163890803638273.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/5ptqkyZxEy)
+# Eclipse Cobblemon para iPhone
 
+Launcher de Minecraft: Java Edition **1.21.1** para a comunidade do servidor **Eclipse Cobblemon**.
+É a versão iPhone da app Android, com a mesma interface: inicie sessão com a Microsoft (ou sem ligação),
+toque em jogar e entre no mundo.
 
+Baseado no [Amethyst-iOS](https://github.com/AngelAuraMC/Amethyst-iOS) (LGPL-3.0).
 
-## Introduction
-Amethyst is a Minecraft: Java Edition launcher for Android, iOS, and iPadOS, based off of zhuowei's [Boardwalk](https://github.com/zhuowei/Boardwalk) project.
-* Supports most versions of Minecraft: Java Edition, from the very first beta to the newest snapshots.
-* Supports Forge, Fabric, OptiFine, and Quilt for you to customize the experience with supported mods.
-* Includes customizable on-screen controls, keyboard and mouse support, and game controller support.
-* Optimized for jailbroken and TrollStore devices to enable better capabilities.
-* Microsoft account and demo mode support for logging into Minecraft.
-* ...and much more!
+## Requisitos
 
-This repository contains the code for our iOS and iPadOS port of Amethyst. Looking for [Android?](https://github.com/AngelAuraMC/Amethyst-Android)
+- **iOS 14 ou superior**, iPhone 6s ou posterior.
+- **Recomendado:** iPhone 12 Pro, 13 Pro, 14 ou superior · **Mínimo:** iPhone XS.
+  A app deteta a memória do iPhone e escolhe a memória do Java e a distância de visão.
+- **JIT** ativo para jogar (ver abaixo). Em iOS 17 e 18 é preciso um computador para o ativar.
+  Em iOS 26 a compatibilidade ainda não está confirmada.
 
-## Getting started with Amethyst
-The [Amethyst wiki](https://wiki.angelauramc.dev/wiki/getting_started/INSTALL.html#ios) has extensive documentation on how to install, set up, and play! For those who wish to install quickly, here's the basics:
+## Instalação
 
-### Requirements
-At the minimum, you'll need one of the following devices on **iOS 14.0** and later:
-- iPhone 6s and later
-- iPad (5th generation) and later
-- iPad Air (2nd generation) and later
-- iPad mini (4th generation) and later
-- iPad Pro (all models)
-- iPod touch (7th generation)
+A app não está na App Store: instala-se um ficheiro IPA.
 
-However, we recommend one of the following devices on **iOS 14.0** and later:
-- iPhone XS and later, excluding iPhone XR and iPhone SE (2nd generation)
-- iPad (10th generation) and later
-- iPad Air (4th generation) and later
-- iPad mini (6th generation) and later
-- iPad Pro (all models, except for 9.7-inch)
+1. Descarregue o IPA mais recente em **Actions → Development build → Artifacts**
+   (`EclipseCobblemon-ipa`; para TrollStore use `EclipseCobblemon-trollstore-tipa`).
+2. Instale-o com o **SideStore** ou o **AltStore** (com um Apple ID gratuito, a app expira ao fim de 7 dias e
+   tem de ser renovada) ou com o **TrollStore** (só em algumas versões do iOS, sem expirar).
+3. Abra a app, inicie sessão e toque em **Jogar**. Na primeira vez, o Minecraft 1.21.1 é transferido
+   (várias centenas de MB; use Wi-Fi).
+4. Quando a app pedir o JIT, ative-o com o StikDebug, SideStore ou AltStore e volte à app.
 
-Recommended devices provide a smoother and more enjoyable gameplay experience compared to other supported devices.
-- iOS 17.x and iOS 18.x is supported. However, a computer is required. For more information, please check out [the official wiki](https://wiki.angelauramc.dev/wiki/faq/ios/JIT.html#what-are-the-methods-to-enable-jit)
+### Ativar o JIT
 
-### Setting up to sideload
-Amethyst can be sideloaded in many ways. Our recommended solution is to install [TrollStore](https://github.com/opa334/TrollStore) if your iOS version supports it. Installing with TrollStore allows you to permanently sign the application, automatically enable JIT, and increase memory limits.
+| Aplicação           | AltStore | SideStore | StikDebug | TrollStore | Jailbreak |
+|---------------------|----------|-----------|-----------|------------|-----------|
+| Precisa de computador | Sim    | Só a 1.ª vez | Só a 1.ª vez | Não     | Não       |
+| Precisa de Wi-Fi    | Sim      | Só a 1.ª vez | Só a 1.ª vez | Não     | Não       |
+| Automático          | Sim (*)  | Não       | Sim       | Sim        | Sim       |
 
-If you cannot, [AltStore](https://altstore.io) and [SideStore](https://sidestore.io) are your next best options.
-- Signing services that do not use your UDID (and use distribution certificates) are not supported, as Amethyst requires capabilities they do not allow. However, if you do managed to gain access to a Development certificate, due to it having the necessary entitlement (being com.apple.security.get-task-allow) to attach a debugger to the running process (enabling JIT), you may use a Development certificate.
-  
-- Only install sideloading software and Amethyst from trusted sources. We are not responsible for any harm caused by using unofficial software.
-- Jailbreaks also benefit from permenant signing, autoJIT, and increased memory limits. However, we do not recommend them on devices intended for regular use.
+(*) Com o AltServer a correr na rede local.
 
-### Installing Amethyst
-#### Release build (TrollStore)
-1. Download an IPA of Amethyst in [Releases](https://github.com/AngelAuraMC/Amethyst-iOS/releases).
-2. Open the package in TrollStore using the share menu.
+## Para quem desenvolve
 
-#### Release build (AltStore/SideStore trusted source)
-These builds will be available soon, stay tuned.
+- A interface Eclipse está em `Natives/eclipse/` (`ECLauncherViewController` é o ecrã principal).
+- O IPA compila no GitHub Actions (`.github/workflows/development.yml`, runner `macos-26`).
+- O workflow `ui-preview.yml` compila para o simulador e guarda capturas de cada ecrã.
+- Contexto, decisões e tarefas: `INSTRUCCIONES_IA.md` e `eclipse/tareas/README.md`.
 
-#### Nightly builds
-*These builds can contain game-breaking bugs. Use with caution.*
-1. Download an IPA build of Amethyst in the [Actions tab](https://github.com/AngelAuraMC/Amethyst-iOS/actions).
-2. Open the downloaded IPA in your sideloading app to install.
+## Licenças
 
-#### Nightly builds (AltStore/SideStore trusted sources)
-These builds will be available soon, stay tuned.
+O código do Amethyst-iOS e do PojavLauncher está sob a **GNU LGPL-3.0** (ver `LICENSE`); este repositório
+é público com todas as alterações. Tipo de letra Lexend sob a SIL Open Font License 1.1.
+Minecraft é uma marca da Mojang AB; esta app não é oficial.
 
-### Enabling JIT
-Amethyst makes use of **just-in-time compilation**, or JIT, to provide usable speeds for the end user. JIT is not supported on iOS without the application being debugged, so workarounds are required to enable it. You can use this chart to determine the best solution for you and your setup.
-| Application         | AltStore | SideStore | StikDebug | TrollStore | Jitterbug          | Jailbroken |
-|---------------------|----------|-----------|-----------|------------|--------------------|------------|
-| Requires ext-device | Yes      | Yes (#)   | Yes (#)   | No         | If VPN unavailable | No         |
-| Requires Wi-Fi      | Yes      | Yes (#)   | Yes (#)   | No         | Yes                | No         |
-| Auto enabled        | Yes (*)  | No        | Yes       | Yes        | No                 | Yes        |
-
-(*) AltServer running on the local network is required.
-(#) Only the first time.
+## Créditos do Amethyst
 
 ## Contributors
 Amethyst is amazing, and surprisingly stable, and it wouldn't be this way without the commmunity that helped and contribute to the project! Some notable names:
@@ -105,4 +82,3 @@ Amethyst is amazing, and surprisingly stable, and it wouldn't be this way withou
 - [UnzipKit](https://github.com/abbeycode/UnzipKit): [BSD-2 License](https://github.com/abbeycode/UnzipKit/blob/master/LICENSE).
 - [DyldDeNeuralyzer](https://github.com/xpn/DyldDeNeuralyzer): bypasses Library Validation for loading external runtime
 - Thanks to [MCHeads](https://mc-heads.net) for providing Minecraft avatars.
-"# ios-cobblelauncher" 
