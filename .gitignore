@@ -14,3 +14,16 @@ project.xcworkspace/
 /depends
 /Natives/config.h
 entitlements.codesign.xml
+
+# Material de trabajo local (instrucciones para IA, tareas, referencias de diseño): no se sube
+/CLAUDE.md
+/AGENTS.md
+/INSTRUCCIONES_IA.md
+/eclipse/
+/3591.png
+/android/ios/
+.claude/
+*.bak
+
+# Android
+/android/local.properties

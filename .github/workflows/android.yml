@@ -8,12 +8,10 @@ on:
       - 'l10n_main'
     paths:
       - 'android/**'
-      - 'eclipse/**'
       - '.github/workflows/android.yml'
   pull_request:
     paths:
       - 'android/**'
-      - 'eclipse/**'
   workflow_dispatch:
 
 concurrency:
@@ -43,7 +41,7 @@ jobs:
         run: |
           SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKM" --licenses > /dev/null || true
-          "$SDKM" "platforms;android-37" "ndk;${NDK_VERSION}"
+          "$SDKM" "platforms;android-37.0" "ndk;${NDK_VERSION}"
 
       - uses: gradle/actions/setup-gradle@v5
 

@@ -41,7 +41,7 @@ A app não está na App Store: instala-se um ficheiro IPA.
 - A interface Eclipse está em `Natives/eclipse/` (`ECLauncherViewController` é o ecrã principal).
 - O IPA compila no GitHub Actions (`.github/workflows/development.yml`, runner `macos-26`).
 - O workflow `ui-preview.yml` compila para o simulador e guarda capturas de cada ecrã.
-- Contexto, decisões e tarefas: `INSTRUCCIONES_IA.md` e `eclipse/tareas/README.md`.
+- A app Android está em `android/` e compila com `.github/workflows/android.yml`.
 
 ## Licenças
 

@@ -6,7 +6,7 @@ Launcher básico de Minecraft Java para Android, con login **premium** (Microsof
 Android → Kotlin (UI, auth, descargas) + Rust (libeclipse_core) → Amethyst/Pojav (JRE + LWJGL + GL) → Minecraft Java
 ```
 
-Apple tiene su sitio reservado en [`ios/`](ios/README.md): el núcleo Rust ya exporta una C ABI.
+La app iOS está en la raíz de este mismo repo (fork de Amethyst-iOS). El núcleo Rust exporta una C ABI por si iOS la usa.
 
 ## Estructura
 
