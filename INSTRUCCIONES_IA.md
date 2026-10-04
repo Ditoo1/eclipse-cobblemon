@@ -7,7 +7,7 @@ Lee este archivo completo antes de tocar nada. Supone que no sabes nada del proy
 **EclipseCobblemon** es un launcher de Minecraft Java para la comunidad del servidor "Eclipse Cobblemon"
 (Minecraft **1.21.1** con el mod **Cobblemon**, sobre Fabric).
 
-- **La versión Android ya existe y funciona.** Está hecha en Kotlin/Compose sobre Amethyst-Android y vive en otro repositorio privado del dueño.
+- **La versión Android ya existe y funciona.** Está hecha en Kotlin/Compose sobre Amethyst-Android y vive en este mismo repo, en **`android/`** (se compila con `.github/workflows/android.yml`).
 - **Tu trabajo es la versión iPhone**: la misma experiencia y la misma marca, en iOS.
 
 ## 2. De qué partes
@@ -28,7 +28,8 @@ JVM en iOS, JIT, LWJGL, renderers GL, controles táctiles, login de Microsoft y 
 | `eclipse/tareas/` | **Qué hay que hacer, por fases. Síguelas en orden.** |
 | `eclipse/diseno/` | Fondo, fuente Lexend, capturas de la app Android y `TOKENS.md` (colores y tipografía). |
 | `eclipse/controles/` | Layout táctil oficial del servidor (formato Pojav/Amethyst). |
-| `eclipse/referencia-android/` | Código Kotlin de Android, **solo como referencia** de lógica y UI. No se compila aquí. |
+| `eclipse/referencia-android/` | Copia antigua del código Android, **solo como referencia**. El código vigente está en `android/app/src/main/java/`. |
+| **`android/`** | **App Android completa** (Gradle). Los cambios de interfaz se hacen en las dos plataformas a la par. |
 
 El remoto `upstream` apunta al Amethyst-iOS original, para traer sus actualizaciones.
 

@@ -1,0 +1,117 @@
+// Runtime de Amethyst-Android (fork de PojavLauncher, LGPL-3.0) como librería.
+// Código vendorizado desde https://github.com/AngelAuraMC/Amethyst-Android (ver VENDORED.md).
+// Aporta: JNI (libpojavexec: jre_launcher, egl_bridge, input_bridge), gestión de JRE (MultiRT),
+// LWJGL para Android, renderers (MobileGlues, gl4es/ANGLE, Zink), controles táctiles y la
+// Activity del juego (net.kdt.pojavlaunch.MainActivity).
+plugins {
+    id 'com.android.library'
+}
+
+def getCFApiKey = {
+    String key = System.getenv("CURSEFORGE_API_KEY")
+    if (key != null) return key
+    File f = new File("$projectDir/curseforge_key.txt")
+    return (f.canRead() && f.isFile()) ? f.text : "DUMMY"
+}
+
+android {
+    namespace 'net.kdt.pojavlaunch'
+    compileSdk = 37
+    ndkVersion = "27.3.13750724"
+
+    defaultConfig {
+        minSdkVersion 21
+        multiDexEnabled true
+        // La librería no tiene VERSION_NAME propio: lo usan los logs/crash reports de Amethyst.
+        buildConfigField "String", "VERSION_NAME", "\"EclipseCobblemon-amethyst-1.1.7\""
+        resValue 'string', 'curseforge_api_key', getCFApiKey()
+        resValue "string", "app_name", "EclipseCobblemon"
+        resValue "string", "app_short_name", "EclipseCobblemon"
+        resValue 'string', 'application_package', 'dev.eclipsecobblemon.launcher'
+        resValue 'string', 'storageProviderAuthorities', 'dev.eclipsecobblemon.launcher.scoped.gamefolder'
+        resValue 'string', 'shareProviderAuthority', 'dev.eclipsecobblemon.launcher.scoped.controlfolder'
+        externalNativeBuild {
+            ndkBuild {
+                // Límite de longitud de línea de comandos en Windows
+                arguments "APP_SHORT_COMMANDS=true"
+            }
+        }
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    buildTypes {
+        debug { minifyEnabled false }
+        release { minifyEnabled false }
+    }
+
+    externalNativeBuild {
+        ndkBuild {
+            path file('src/main/jni/Android.mk')
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+            pickFirsts += ['**/libbytehook.so']
+        }
+    }
+
+    buildFeatures {
+        prefab true
+        buildConfig true
+        resValues true
+    }
+
+    lint {
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation 'javax.annotation:javax.annotation-api:1.3.2'
+    implementation 'commons-codec:commons-codec:1.15'
+    // api: la app usa MainActivity (AppCompatActivity) y ProgressLayout (ConstraintLayout)
+    api 'androidx.preference:preference:1.2.0'
+    implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
+    implementation 'androidx.viewpager2:viewpager2:1.1.0-beta01'
+    implementation 'androidx.annotation:annotation:1.5.0'
+    api "androidx.constraintlayout:constraintlayout:2.1.4"
+
+    implementation 'com.github.duanhong169:checkerboarddrawable:1.0.2'
+    implementation 'com.github.PojavLauncherTeam:portrait-sdp:ed33e89cbc'
+    implementation 'com.github.PojavLauncherTeam:portrait-ssp:6c02fd739b'
+    implementation 'com.github.Mathias-Boulay:ExtendedView:1.0.0'
+    implementation 'com.github.Mathias-Boulay:android_gamepad_remapper:2.0.3'
+    implementation 'com.github.Mathias-Boulay:virtual-joystick-android:1.14'
+
+    implementation 'org.tukaani:xz:1.8'
+    implementation 'net.sourceforge.htmlcleaner:htmlcleaner:2.6.1'
+    implementation 'com.bytedance:bytehook:1.0.10'
+    implementation 'top.fifthlight.touchcontroller:proxy-client-android:0.0.4'
+
+    // AARs/JARs precompilados de Amethyst: MobileGlues, ANGLE, Kopper-Zink, LWJGL natives,
+    // OpenAL, SDL, zstd, gson, exp4j...
+    api fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
+
+    implementation "net.java.dev.jna:jna:5.14.0@aar"
+
+    implementation project(":androidnsbypass")
+}
+
+apply from: 'prefab_bypass.gradle'
+
+// El ndk-build de libpojavexec enlaza libandroidnsbypass.so vía prefab: debe estar compilada
+// antes de configurarlo (en release, con Gradle en paralelo, a veces no lo estaba).
+afterEvaluate {
+    ["Debug", "Release"].each { variant ->
+        tasks.matching { it.name.startsWith("configureNdkBuild$variant") }.configureEach {
+            dependsOn(":androidnsbypass:assemble$variant")
+        }
+    }
+}

@@ -1,0 +1,5 @@
+module EclipseCore {
+    header "eclipse_core.h"
+    link "eclipse_core"
+    export *
+}

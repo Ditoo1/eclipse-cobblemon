@@ -1,0 +1,92 @@
+name: Android build
+
+# Compila el APK de Android (android/) en paralelo con el IPA de iOS.
+# Con los secretos de firma configurados, también genera el APK release firmado.
+on:
+  push:
+    branches-ignore:
+      - 'l10n_main'
+    paths:
+      - 'android/**'
+      - 'eclipse/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'eclipse/**'
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build APK (Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: android
+    env:
+      NDK_VERSION: 27.3.13750724
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar SDK 37 y NDK
+        run: sdkmanager "platforms;android-37" "ndk;${NDK_VERSION}"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Núcleo Rust (libeclipse_core.so)
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+          cargo install cargo-ndk --locked
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
+          cd native
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -P 26 -o ../app/src/main/jniLibs build --release
+
+      - name: Tests
+        run: |
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest
+          (cd native && cargo test)
+
+      - name: APK debug
+        run: ./gradlew assembleDebug
+
+      - name: Preparar firma
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "Sin secretos de firma: solo APK debug"; exit 0; fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          cat > "$RUNNER_TEMP/keystore.properties" <<EOF
+          storeFile=$RUNNER_TEMP/release.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: APK release firmado
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          ECLIPSE_SIGNING_PROPS: ${{ runner.temp }}/keystore.properties
+        run: ./gradlew assembleRelease
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EclipseCobblemon-android
+          path: android/app/build/outputs/apk/**/*.apk
