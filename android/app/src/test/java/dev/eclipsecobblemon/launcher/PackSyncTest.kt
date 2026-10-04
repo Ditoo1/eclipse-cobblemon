@@ -1,9 +1,11 @@
 package dev.eclipsecobblemon.launcher
 
+import dev.eclipsecobblemon.launcher.game.Fabric
 import dev.eclipsecobblemon.launcher.game.PackManifest
 import dev.eclipsecobblemon.launcher.game.PackPaths
 import dev.eclipsecobblemon.launcher.game.PackSync
 import dev.eclipsecobblemon.launcher.game.PackTransport
+import dev.eclipsecobblemon.launcher.game.VersionManager
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -221,6 +223,21 @@ class PackSyncTest {
         assertEquals("fabric-loader-0.16.14-1.21.1", PackManifest.parse(server.manifest).versionId)
         publish(1)
         assertEquals("1.21.1", PackManifest.parse(server.manifest).versionId)
+    }
+
+    /** Amethyst lanza versions/<id>/<id>.jar: el perfil de Fabric necesita su copia del jar vanilla. */
+    @Test
+    fun fabricGetsTheVanillaJar() {
+        val vm = VersionManager(game)
+        val id = "fabric-loader-0.16.14-1.21.1"
+        vm.clientJarFile("1.21.1").apply { parentFile!!.mkdirs(); writeText("vanilla jar") }
+        vm.versionJsonFile(id).parentFile!!.mkdirs()
+        Fabric.copyClientJar(vm, "1.21.1", id)
+        assertEquals("vanilla jar", vm.clientJarFile(id).readText())
+        // Una copia rota (otro tamaño) se rehace
+        vm.clientJarFile(id).writeText("x")
+        Fabric.copyClientJar(vm, "1.21.1", id)
+        assertEquals("vanilla jar", vm.clientJarFile(id).readText())
     }
 
     private companion object {
