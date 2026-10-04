@@ -4,6 +4,7 @@ name: UI preview (simulator)
 # para revisar la interfaz sin un iPhone.
 on:
   push:
+    branches: ['**']  # no en etiquetas: las releases las compila release.yml
     paths:
       - 'Natives/eclipse/**'
       - 'Natives/resources/**'

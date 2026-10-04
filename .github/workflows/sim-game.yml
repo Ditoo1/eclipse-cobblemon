@@ -4,6 +4,7 @@ name: Simulator game test
 # pulsa Jogar sola y guarda capturas y registos mientras arranca el Minecraft.
 on:
   push:
+    branches: ['**']  # no en etiquetas: las releases las compila release.yml
     paths:
       - '.github/workflows/sim-game.yml'
   workflow_dispatch:

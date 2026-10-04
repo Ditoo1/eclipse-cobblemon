@@ -23,7 +23,7 @@ android {
         targetSdk = 34
         // release.yml los pasa con -PversionCode / -PversionName
         versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
-        versionName = findProperty("versionName") as String? ?: "0.1.0"
+        versionName = findProperty("versionName") as String? ?: "1.0.0"
     }
 
     signingConfigs {
