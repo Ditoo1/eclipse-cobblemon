@@ -21,8 +21,9 @@ android {
         minSdk = 26
         // Igual que Amethyst: su runtime está probado con targetSdk 34
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        // release.yml los pasa con -PversionCode / -PversionName
+        versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
+        versionName = findProperty("versionName") as String? ?: "0.1.0"
     }
 
     signingConfigs {

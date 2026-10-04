@@ -13,6 +13,13 @@ on:
     paths:
       - 'android/**'
   workflow_dispatch:
+  # release.yml lo llama para adjuntar el APK firmado a la release
+  workflow_call:
+    inputs:
+      version:
+        description: 'versionName del APK'
+        type: string
+        required: false
 
 concurrency:
   group: android-${{ github.ref }}
@@ -84,7 +91,21 @@ jobs:
         if: steps.signing.outputs.enabled == 'true'
         env:
           ECLIPSE_SIGNING_PROPS: ${{ runner.temp }}/keystore.properties
-        run: ./gradlew assembleRelease
+          VERSION: ${{ inputs.version }}
+        run: |
+          VERSION="${VERSION#v}"
+          if [ -n "$VERSION" ]; then
+            ./gradlew assembleRelease -PversionName="$VERSION" -PversionCode=${{ github.run_number }}
+            cp app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/EclipseCobblemon-$VERSION-android.apk"
+          else
+            ./gradlew assembleRelease
+          fi
+
+      - name: Una release necesita el APK firmado
+        if: inputs.version != '' && steps.signing.outputs.enabled != 'true'
+        run: |
+          echo "Faltan los secretos ANDROID_* de firma" >&2
+          exit 1
 
       - uses: actions/upload-artifact@v5
         with:
