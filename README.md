@@ -1,57 +1,160 @@
-# Eclipse Cobblemon para iPhone
+# Eclipse Cobblemon
 
-Launcher de Minecraft: Java Edition **1.21.1** para a comunidade do servidor **Eclipse Cobblemon**.
-É a versão iPhone da app Android, com a mesma interface: inicie sessão com a Microsoft (ou sem ligação),
-toque em jogar e entre no mundo.
+[Español](#español) · [English](#english)
 
-Baseado no [Amethyst-iOS](https://github.com/AngelAuraMC/Amethyst-iOS) (LGPL-3.0).
+---
 
-## Requisitos
+## Español
 
-- **iOS 14 ou superior**, iPhone 6s ou posterior.
-- **Recomendado:** iPhone 12 Pro, 13 Pro, 14 ou superior · **Mínimo:** iPhone XS.
-  A app deteta a memória do iPhone e escolhe a memória do Java e a distância de visão.
-- **JIT** ativo para jogar (ver abaixo). Em iOS 17 e 18 é preciso um computador para o ativar.
-  Em iOS 26 a compatibilidade ainda não está confirmada.
+Launcher de Minecraft: Java Edition **1.21.1** para la comunidad del servidor **Eclipse Cobblemon**, para **Android** y **iPhone**.
+Las dos apps tienen la misma interfaz: inicia sesión con Microsoft (u offline), toca jugar y entra al mundo.
 
-## Instalação
+Basado en [Amethyst-Android](https://github.com/AngelAuraMC/Amethyst-Android) y [Amethyst-iOS](https://github.com/AngelAuraMC/Amethyst-iOS) (LGPL-3.0).
 
-A app não está na App Store: instala-se um ficheiro IPA.
+### Descarga
 
-1. Descarregue o IPA mais recente em **Actions → Development build → Artifacts**
-   (`EclipseCobblemon-ipa`; para TrollStore use `EclipseCobblemon-trollstore-tipa`).
-2. Instale-o com o **SideStore** ou o **AltStore** (com um Apple ID gratuito, a app expira ao fim de 7 dias e
-   tem de ser renovada) ou com o **TrollStore** (só em algumas versões do iOS, sem expirar).
-3. Abra a app, inicie sessão e toque em **Jogar**. Na primeira vez, o Minecraft 1.21.1 é transferido
-   (várias centenas de MB; use Wi-Fi).
-4. Quando a app pedir o JIT, ative-o com o StikDebug, SideStore ou AltStore e volte à app.
+Todo está en **Releases**:
 
-### Ativar o JIT
+| Archivo | Para |
+|---|---|
+| `EclipseCobblemon-X.Y.Z-android.apk` | Android 8.0 o superior |
+| `EclipseCobblemon-X.Y.Z-ios.ipa` | iPhone con SideStore o AltStore |
+| `EclipseCobblemon-X.Y.Z-ios-trollstore.tipa` | iPhone con TrollStore |
 
-| Aplicação           | AltStore | SideStore | StikDebug | TrollStore | Jailbreak |
-|---------------------|----------|-----------|-----------|------------|-----------|
-| Precisa de computador | Sim    | Só a 1.ª vez | Só a 1.ª vez | Não     | Não       |
-| Precisa de Wi-Fi    | Sim      | Só a 1.ª vez | Só a 1.ª vez | Não     | Não       |
-| Automático          | Sim (*)  | Não       | Sim       | Sim        | Sim       |
+### Android
 
-(*) Com o AltServer a correr na rede local.
+1. Descarga el `.apk` en el teléfono y ábrelo. Si Android lo pide, permite instalar apps de esta fuente.
+2. Abre la app, inicia sesión y toca **Jugar**. La primera vez se descargan Minecraft 1.21.1 y Java
+   (varios cientos de MB; usa Wi-Fi).
 
-## Para quem desenvolve
+Las versiones nuevas se instalan encima de la anterior sin perder datos.
 
-- A interface Eclipse está em `Natives/eclipse/` (`ECLauncherViewController` é o ecrã principal).
-- O IPA compila no GitHub Actions (`.github/workflows/development.yml`, runner `macos-26`).
-- O workflow `ui-preview.yml` compila para o simulador e guarda capturas de cada ecrã.
-- A app Android está em `android/` e compila com `.github/workflows/android.yml`.
+### iPhone
 
-## Licenças
+**Requisitos**
 
-O código do Amethyst-iOS e do PojavLauncher está sob a **GNU LGPL-3.0** (ver `LICENSE`); este repositório
-é público com todas as alterações. Tipo de letra Lexend sob a SIL Open Font License 1.1.
-Minecraft é uma marca da Mojang AB; esta app não é oficial.
+- **iOS 14 o superior**, iPhone 6s o posterior.
+- **Recomendado:** iPhone 12 Pro, 13 Pro, 14 o superior · **Mínimo:** iPhone XS.
+  La app detecta la memoria del iPhone y elige la memoria de Java y la distancia de renderizado.
+- **JIT** activo para jugar (ver abajo). En iOS 17 y 18 hace falta un computador para activarlo.
+  En iOS 26 la compatibilidad aún no está confirmada.
 
-## Créditos do Amethyst
+**Instalación**
 
-## Contributors
+La app no está en la App Store: se instala un archivo IPA.
+
+1. Descarga el IPA de la última release.
+2. Instálalo con **SideStore** o **AltStore** (con un Apple ID gratuito la app caduca a los 7 días y
+   hay que renovarla) o con **TrollStore** (solo en algunas versiones de iOS, no caduca).
+3. Abre la app, inicia sesión y toca **Jogar**. La primera vez se descarga Minecraft 1.21.1.
+4. Cuando la app pida el JIT, actívalo con StikDebug, SideStore o AltStore y vuelve a la app.
+
+**Activar el JIT**
+
+| | AltStore | SideStore | StikDebug | TrollStore | Jailbreak |
+|---|---|---|---|---|---|
+| Necesita computador | Sí | Solo la 1.ª vez | Solo la 1.ª vez | No | No |
+| Necesita Wi-Fi | Sí | Solo la 1.ª vez | Solo la 1.ª vez | No | No |
+| Automático | Sí (*) | No | Sí | Sí | Sí |
+
+(*) Con AltServer funcionando en la red local.
+
+### Desarrollo
+
+| | Android | iPhone |
+|---|---|---|
+| Código | `android/` (Kotlin + Compose, núcleo Rust en `android/native/`) | raíz del repo (fork de Amethyst-iOS); la interfaz está en `Natives/eclipse/` |
+| Build en GitHub Actions | `android.yml` (Ubuntu) | `development.yml` (macOS) |
+| Capturas de la interfaz | — | `ui-preview.yml` (simulador) |
+
+Las dos apps deben verse igual: un cambio de interfaz o de textos se hace en ambas.
+Para publicar una versión: crea la etiqueta `vX.Y.Z`. `release.yml` compila el APK firmado y el IPA y deja un borrador en Releases.
+
+### Licencias
+
+El código de Amethyst y PojavLauncher está bajo la **GNU LGPL-3.0** (ver `LICENSE`). Quien reciba la app
+puede pedir el código de esas partes y de sus modificaciones. Fuente Lexend bajo la SIL Open Font License 1.1
+(`LICENSES/`). Minecraft es una marca de Mojang AB; esta app no es oficial.
+
+---
+
+## English
+
+Minecraft: Java Edition **1.21.1** launcher for the **Eclipse Cobblemon** server community, for **Android** and **iPhone**.
+Both apps share the same interface: sign in with Microsoft (or offline), tap play and jump into the world.
+
+Based on [Amethyst-Android](https://github.com/AngelAuraMC/Amethyst-Android) and [Amethyst-iOS](https://github.com/AngelAuraMC/Amethyst-iOS) (LGPL-3.0).
+
+### Download
+
+Everything is in **Releases**:
+
+| File | For |
+|---|---|
+| `EclipseCobblemon-X.Y.Z-android.apk` | Android 8.0 or later |
+| `EclipseCobblemon-X.Y.Z-ios.ipa` | iPhone with SideStore or AltStore |
+| `EclipseCobblemon-X.Y.Z-ios-trollstore.tipa` | iPhone with TrollStore |
+
+### Android
+
+1. Download the `.apk` on your phone and open it. If Android asks, allow installing apps from this source.
+2. Open the app, sign in and tap **Jugar**. The first time, Minecraft 1.21.1 and Java are downloaded
+   (several hundred MB; use Wi-Fi).
+
+New versions install over the previous one without losing data.
+
+### iPhone
+
+**Requirements**
+
+- **iOS 14 or later**, iPhone 6s or newer.
+- **Recommended:** iPhone 12 Pro, 13 Pro, 14 or newer · **Minimum:** iPhone XS.
+  The app detects the iPhone's memory and picks the Java memory and render distance.
+- **JIT** enabled to play (see below). On iOS 17 and 18 you need a computer to enable it.
+  iOS 26 compatibility is not confirmed yet.
+
+**Installation**
+
+The app is not on the App Store: you install an IPA file.
+
+1. Download the IPA from the latest release.
+2. Install it with **SideStore** or **AltStore** (with a free Apple ID the app expires after 7 days and
+   must be refreshed) or with **TrollStore** (only some iOS versions, never expires).
+3. Open the app, sign in and tap **Jogar**. The first time, Minecraft 1.21.1 is downloaded.
+4. When the app asks for JIT, enable it with StikDebug, SideStore or AltStore and return to the app.
+
+**Enabling JIT**
+
+| | AltStore | SideStore | StikDebug | TrollStore | Jailbreak |
+|---|---|---|---|---|---|
+| Needs a computer | Yes | First time only | First time only | No | No |
+| Needs Wi-Fi | Yes | First time only | First time only | No | No |
+| Automatic | Yes (*) | No | Yes | Yes | Yes |
+
+(*) With AltServer running on the local network.
+
+### Development
+
+| | Android | iPhone |
+|---|---|---|
+| Code | `android/` (Kotlin + Compose, Rust core in `android/native/`) | repo root (Amethyst-iOS fork); the UI is in `Natives/eclipse/` |
+| GitHub Actions build | `android.yml` (Ubuntu) | `development.yml` (macOS) |
+| UI screenshots | — | `ui-preview.yml` (simulator) |
+
+Both apps must look the same: a UI or text change goes into both.
+To publish a version, push the tag `vX.Y.Z`. `release.yml` builds the signed APK and the IPA and leaves a draft in Releases.
+
+### Licenses
+
+Amethyst and PojavLauncher code is under the **GNU LGPL-3.0** (see `LICENSE`). Anyone who receives the app
+can request the source of those parts and their modifications. Lexend font under the SIL Open Font License 1.1
+(`LICENSES/`). Minecraft is a trademark of Mojang AB; this app is not official.
+
+---
+
+## Amethyst credits
+
+### Contributors
 Amethyst is amazing, and surprisingly stable, and it wouldn't be this way without the commmunity that helped and contribute to the project! Some notable names:
 
 @crystall1nedev - Project manager, iOS port developer  
@@ -62,7 +165,7 @@ Amethyst is amazing, and surprisingly stable, and it wouldn't be this way withou
 @jkcoxson   
 @Diatrus 
 
-## Third party components and their licenses
+### Third party components and their licenses
 - [Caciocavallo](https://github.com/PojavLauncherTeam/caciocavallo): [GNU GPLv2 License](https://github.com/PojavLauncherTeam/caciocavallo/blob/master/LICENSE).
 - [jsr305](https://code.google.com/p/jsr-305): [3-Clause BSD License](http://opensource.org/licenses/BSD-3-Clause).
 - [Boardwalk](https://github.com/zhuowei/Boardwalk): [Apache 2.0 License](https://github.com/zhuowei/Boardwalk/blob/master/LICENSE) 
