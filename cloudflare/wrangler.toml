@@ -1,0 +1,14 @@
+# Worker del pack de Eclipse Cobblemon. Pasos en README.md.
+name = "eclipse-pack"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# panel.html se importa como texto
+rules = [{ type = "Text", globs = ["**/*.html"], fallthrough = false }]
+
+[[r2_buckets]]
+binding = "PACK"
+bucket_name = "eclipse-pack"
+
+# El secreto ADMIN_PASSWORD no va aquí: `npx wrangler secret put ADMIN_PASSWORD`
+# (en local, en el archivo .dev.vars, ver .dev.vars.example).

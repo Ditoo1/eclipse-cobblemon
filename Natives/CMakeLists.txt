@@ -138,6 +138,7 @@ add_executable(AngelAuraAmethyst
   input/KeyboardInput.m
 
   eclipse/ECLauncherViewController.m
+  eclipse/ECPackSync.m
   eclipse/ECSkin.m
   eclipse/ECTheme.m
   eclipse/ECViews.m

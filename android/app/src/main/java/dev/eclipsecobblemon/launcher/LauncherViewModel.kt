@@ -19,6 +19,8 @@ import dev.eclipsecobblemon.launcher.net.Http
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import dev.eclipsecobblemon.launcher.game.Fabric
+import dev.eclipsecobblemon.launcher.game.PackSync
 import dev.eclipsecobblemon.launcher.game.VersionEntry
 import dev.eclipsecobblemon.launcher.game.VersionManager
 import dev.eclipsecobblemon.launcher.launch.AmethystBridge
@@ -52,7 +54,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     val logs = mutableStateListOf<String>()
 
     /** Etapa visible en la interfaz mientras se prepara y lanza el juego. */
-    enum class Stage { IDLE, VERSION, FILES, JAVA, LAUNCHING }
+    enum class Stage { IDLE, VERSION, FILES, PACK, JAVA, LAUNCHING }
     var stage by mutableStateOf(Stage.IDLE)
         private set
     var filesDone by mutableStateOf(0)
@@ -61,6 +63,16 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var javaProgress by mutableStateOf<Float?>(null)
         private set
+    /** Bytes del pack transferidos / por transferir (etapa PACK). */
+    var packDone by mutableStateOf(0L)
+        private set
+    var packTotal by mutableStateOf(0L)
+        private set
+
+    /** Pack del servidor (mods, packs, configs). null si la app se compiló sin packUrl. */
+    private val packSync = BuildConfig.PACK_URL.takeIf { it.isNotBlank() }
+        ?.let { PackSync(AmethystBridge.gameDir(app), it) }
+    val packEnabled get() = packSync != null
     private var launchedAt = 0L
 
     /** RAM sugerida: ~40 % de la memoria total del equipo, en pasos de 256 MB (1–4 GB). */
@@ -247,7 +259,12 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun ByteArray.isPng() = size > 8 && this[0] == 0x89.toByte() && this[1] == 'P'.code.toByte()
 
-    fun install() = runTask { installSelected() }
+    /** "Verificar ficheiros": vanilla + pack, releyendo el SHA-1 de todo. */
+    fun install() = runTask {
+        val remote = fetchPack()
+        installSelected()
+        remote?.let { applyPack(it, verify = true) }
+    }
 
     /** Tamaño del .minecraft (versiones, librerías, assets, mundos…); null mientras se calcula. */
     var gameDataBytes by mutableStateOf<Long?>(null)
@@ -280,23 +297,60 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             acc = MicrosoftAuth.refresh(acc, ::log)
             saveAccount(acc)
         }
+        val remote = fetchPack()
         if (!versionManager.isInstalled(selectedVersion)) installSelected()
+        val versionId = remote?.let { applyPack(it, verify = false) } ?: selectedVersion
 
         stage = Stage.JAVA
         withContext(Dispatchers.IO) {
-            AmethystBridge.prepare(activity, acc, selectedVersion, ramMb, ::log) { pct ->
+            AmethystBridge.prepare(activity, acc, versionId, ramMb, ::log) { pct ->
                 viewModelScope.launch(Dispatchers.Main) { javaProgress = pct / 100f }
             }
         }
-        log("A iniciar o Minecraft $selectedVersion…")
+        log("A iniciar o Minecraft $versionId…")
         stage = Stage.LAUNCHING
         launchedAt = System.currentTimeMillis()
-        AmethystBridge.launch(activity, selectedVersion)
+        AmethystBridge.launch(activity, versionId)
     }
 
     /** Al volver del juego (o si no llegó a abrirse) la pantalla de lanzamiento se cierra. */
     fun onLauncherResumed() {
         if (stage == Stage.LAUNCHING && System.currentTimeMillis() - launchedAt > 1500) stage = Stage.IDLE
+    }
+
+    /** Manifiesto del pack. Sin conexión lanza error: no se juega con un pack sin verificar. */
+    private suspend fun fetchPack(): PackSync.Remote? {
+        val sync = packSync ?: return null
+        stage = Stage.VERSION
+        log("A verificar o pack do servidor…")
+        val remote = sync.fetch()
+        val mc = remote.manifest.minecraft
+        check(mc == selectedVersion) { "O pack pede o Minecraft $mc; esta app só suporta o $selectedVersion. Atualize a app." }
+        return remote
+    }
+
+    /** Instala el loader del pack (Fabric) y sincroniza sus archivos. Devuelve la versión que hay que lanzar. */
+    private suspend fun applyPack(remote: PackSync.Remote, verify: Boolean): String {
+        val sync = packSync ?: return selectedVersion
+        val manifest = remote.manifest
+        stage = Stage.PACK
+        progress = null
+        packDone = 0
+        packTotal = 0
+        val versionId = manifest.loader?.let { loader ->
+            Fabric.installProfile(versionManager, manifest.minecraft, loader.version, ::log).also { id ->
+                versionManager.installLibraries(id, ::log) { _, _ -> }
+            }
+        } ?: manifest.minecraft
+        val r = sync.apply(remote, verify, ::log) { done, total ->
+            viewModelScope.launch(Dispatchers.Main) {
+                packDone = done
+                packTotal = total
+                progress = if (total == 0L) null else done.toFloat() / total
+            }
+        }
+        log("Pack revisão ${manifest.revision}: ${r.downloaded} transferidos, ${r.deleted} removidos, ${r.upToDate} já estavam OK")
+        return versionId
     }
 
     private suspend fun installSelected() {
@@ -339,6 +393,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         log("Camada Rust: " + if (NativeCore.available) "libeclipse_core.so carregada" else "não compilada (a usar Kotlin)")
         log("Runtime Amethyst: " + if (amethystReady) "pronto" else "sem armazenamento")
         log("Diretório: ${versionManager.gameDir}")
+        log("Pack: " + (BuildConfig.PACK_URL.ifBlank { null } ?: "sem servidor configurado (vanilla)"))
         loadVersions()
         loadSkin()
     }

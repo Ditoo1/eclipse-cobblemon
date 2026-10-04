@@ -24,6 +24,9 @@ android {
         // release.yml los pasa con -PversionCode / -PversionName
         versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
         versionName = findProperty("versionName") as String? ?: "1.0.0"
+        // URL del manifiesto del pack (Worker): gradle.properties o -PpackUrl=. Vacía = sin pack (vanilla).
+        val packUrl = (findProperty("packUrl") as String?).orEmpty().trim()
+        buildConfigField("String", "PACK_URL", "\"$packUrl\"")
     }
 
     signingConfigs {

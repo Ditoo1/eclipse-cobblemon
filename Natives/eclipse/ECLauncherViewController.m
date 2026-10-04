@@ -17,6 +17,7 @@
 #import "utils.h"
 
 #import "ECLauncherViewController.h"
+#import "ECPackSync.h"
 #import "ECSkin.h"
 #import "ECTheme.h"
 #import "ECViews.h"
@@ -29,6 +30,13 @@ static NSString *const ECProfileName = @"Eclipse Cobblemon";
 static NSString *const ECRendererLabel = @"Metal (ANGLE)";
 static NSString *const ECNotificationLog = @"ECLogChanged";
 static void *ECProgressContext = &ECProgressContext;
+
+/// URL del manifiesto del pack (clave ECPackURL de Info.plist). nil = sin pack: Minecraft vanilla.
+static NSURL *ECPackURL(void) {
+    NSString *value = [NSBundle.mainBundle objectForInfoDictionaryKey:@"ECPackURL"];
+    value = [value stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+    return value.length ? [NSURL URLWithString:value] : nil;
+}
 
 #pragma mark - Registo
 
@@ -126,6 +134,7 @@ typedef NS_ENUM(NSInteger, ECStage) {
     ECStageIdle,
     ECStageVersion,
     ECStageFiles,
+    ECStagePack,
     ECStageJava,
     ECStageLaunching
 };
@@ -179,6 +188,10 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
 @property(nonatomic) NSInteger filesDone, filesTotal;
 @property(nonatomic) MinecraftResourceDownloadTask *task;
 @property(nonatomic) NSTimeInterval launchedAt;
+/// Pack del servidor validado en este lanzamiento (nil sin ECPackURL).
+@property(nonatomic) ECPackManifest *pack;
+@property(nonatomic, copy) NSString *launchVersionId;
+@property(nonatomic) int64_t packDone, packTotal;
 
 // Cuenta y memoria (accesores propios)
 @property(nonatomic, readonly) BaseAuthenticator *account;
@@ -467,9 +480,10 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     PLProfiles *profiles = PLProfiles.current;
     NSMutableDictionary *all = [profiles.profiles mutableCopy] ?: [NSMutableDictionary new];
     NSMutableDictionary *mine = [all[ECProfileName] mutableCopy] ?: [NSMutableDictionary new];
-    BOOL changed = ![mine[@"lastVersionId"] isEqualToString:ECVersion] || ![profiles.selectedProfileName isEqualToString:ECProfileName];
+    NSString *versionId = self.launchVersionId ?: ECVersion;
+    BOOL changed = ![mine[@"lastVersionId"] isEqualToString:versionId] || ![profiles.selectedProfileName isEqualToString:ECProfileName];
     mine[@"name"] = ECProfileName;
-    mine[@"lastVersionId"] = ECVersion;
+    mine[@"lastVersionId"] = versionId;
     // Simulador: sin depurador, las páginas JIT espejo se consideran inválidas; probar sin espejo.
     if (getenv("SIMULATOR_DEVICE_NAME")) {
         NSString *args = getenv("EC_JVM_ARGS") ? @(getenv("EC_JVM_ARGS")) : @"-XX:-MirrorMappedCodeCache";
@@ -554,6 +568,7 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     }
     self.busy = YES;
     self.launchAfterDownload = launch;
+    self.pack = nil;
     self.progress = -1;
     self.filesDone = self.filesTotal = 0;
     self.stage = ECStageVersion;
@@ -583,7 +598,7 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
 
 - (void)fetchVersionList {
     if ([MinecraftResourceUtils findVersion:ECVersion inList:remoteVersionList]) {
-        [self startDownload];
+        [self preparePack];
         return;
     }
     ECLog(@"A obter a lista de versões…");
@@ -595,16 +610,56 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
         ]];
         [remoteVersionList addObjectsFromArray:response[@"versions"]];
         setPrefObject(@"internal.latest_version", response[@"latest"]);
-        [self startDownload];
+        [self preparePack];
     } failure:^(NSURLSessionTask *operation, NSError *error) {
         ECLog(@"Sem lista de versões (%@); a usar ficheiros locais", error.localizedDescription);
-        [self startDownload];
+        [self preparePack];
     }];
 }
 
+/// Con pack: baja el manifiesto (sin conexión no se juega) y el perfil de Fabric antes de los archivos del juego.
+- (void)preparePack {
+    NSURL *url = ECPackURL();
+    if (!url) {
+        self.pack = nil;
+        self.launchVersionId = ECVersion;
+        [self startDownload];
+        return;
+    }
+    ECLog(@"A verificar o pack do servidor…");
+    NSString *gameDir = @(getenv("POJAV_GAME_DIR"));
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        ECPackSync *sync = [[ECPackSync alloc] initWithGameDir:gameDir manifestURL:url];
+        NSError *error;
+        ECPackManifest *manifest = [sync fetch:&error];
+        NSString *versionId = nil;
+        if (manifest && ![manifest.minecraft isEqualToString:ECVersion]) {
+            error = [NSError errorWithDomain:@"ECPackSync" code:2 userInfo:@{NSLocalizedDescriptionKey:
+                [NSString stringWithFormat:@"O pack pede o Minecraft %@; esta app só suporta o %@. Atualize a app.", manifest.minecraft, ECVersion]}];
+        } else if (manifest) {
+            if (manifest.loaderVersion) ECLog(@"Fabric Loader %@", manifest.loaderVersion);
+            versionId = [sync installLoader:manifest error:&error];
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (!versionId) {
+                [self failWith:error.localizedDescription ?: @"Não foi possível verificar o pack."];
+                return;
+            }
+            self.pack = manifest;
+            self.launchVersionId = versionId;
+            [self ensureProfile];
+            [self startDownload];
+        });
+    });
+}
+
 - (void)startDownload {
-    ECLog(@"A preparar o Minecraft %@…", ECVersion);
-    NSDictionary *version = (NSDictionary *)[MinecraftResourceUtils findVersion:ECVersion inList:remoteVersionList] ?: @{@"id": ECVersion, @"type": @"release"};
+    NSString *versionId = self.launchVersionId ?: ECVersion;
+    ECLog(@"A preparar o Minecraft %@…", versionId);
+    // Un perfil de Fabric es local (versions/<id>/<id>.json con inheritsFrom): la tarea baja su base vanilla
+    NSDictionary *version = [versionId isEqualToString:ECVersion]
+        ? ((NSDictionary *)[MinecraftResourceUtils findVersion:ECVersion inList:remoteVersionList] ?: @{@"id": ECVersion, @"type": @"release"})
+        : @{@"id": versionId, @"type": @"custom"};
     self.taskFinished = NO;
     MinecraftResourceDownloadTask *task = [MinecraftResourceDownloadTask new];
     self.task = task;
@@ -675,12 +730,52 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
         [self failWith:@"Não foi possível ler a versão do Minecraft."];
         return;
     }
-    if (!self.launchAfterDownload) {
-        ECLog(@"Ficheiros verificados");
-        [self finishBusy];
+    [self syncPackVerify:!self.launchAfterDownload then:^{
+        if (!self.launchAfterDownload) {
+            ECLog(@"Ficheiros verificados");
+            [self finishBusy];
+            return;
+        }
+        [self prepareJavaAndLaunch:metadata];
+    }];
+}
+
+/// Etapa "Mods": deja el .minecraft igual que el pack. Si falla, no se lanza el juego.
+- (void)syncPackVerify:(BOOL)verify then:(void (^)(void))next {
+    ECPackManifest *manifest = self.pack;
+    if (!manifest) {
+        next();
         return;
     }
+    self.stage = ECStagePack;
+    self.progress = -1;
+    self.packDone = self.packTotal = 0;
+    [self refreshAll];
+    ECPackSync *sync = [[ECPackSync alloc] initWithGameDir:@(getenv("POJAV_GAME_DIR")) manifestURL:ECPackURL()];
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSError *error;
+        BOOL ok = [sync apply:manifest verify:verify log:^(NSString *message) {
+            ECLog(@"%@", message);
+        } progress:^(int64_t done, int64_t total) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (self.stage != ECStagePack) return;
+                self.packDone = done;
+                self.packTotal = total;
+                self.progress = total > 0 ? (CGFloat)done / total : -1;
+                [self refreshStatus];
+            });
+        } error:&error];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (!ok) {
+                [self failWith:[NSString stringWithFormat:@"Pack: %@", error.localizedDescription]];
+                return;
+            }
+            next();
+        });
+    });
+}
 
+- (void)prepareJavaAndLaunch:(NSDictionary *)metadata {
     // Java: os runtimes vêm dentro da app; só se verifica que existe o necessário.
     self.stage = ECStageJava;
     self.progress = 0;
@@ -712,7 +807,7 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
 }
 
 - (void)launchWithMetadata:(NSDictionary *)metadata {
-    ECLog(@"A iniciar o Minecraft %@…", ECVersion);
+    ECLog(@"A iniciar o Minecraft %@…", self.launchVersionId ?: ECVersion);
     self.stage = ECStageLaunching;
     self.launchedAt = NSDate.date.timeIntervalSince1970;
     [self refreshAll];
@@ -1629,6 +1724,11 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     if (busy && self.stage == ECStageFiles) {
         title = @"A transferir ficheiros";
         sub = [NSString stringWithFormat:@"%@ de %@", [nf stringFromNumber:@(self.filesDone)], [nf stringFromNumber:@(self.filesTotal)]];
+    } else if (busy && self.stage == ECStagePack) {
+        title = @"A sincronizar o pack";
+        sub = self.packTotal > 0
+            ? [NSString stringWithFormat:@"%.1f MB de %.1f MB", self.packDone / 1048576.0, self.packTotal / 1048576.0]
+            : @"A verificar mods e ficheiros…";
     } else if (busy && self.stage == ECStageJava) {
         title = @"A preparar o Java";
         sub = [NSString stringWithFormat:@"A verificar o runtime · %d %%", (int)(MAX(0, self.progress) * 100)];
@@ -1646,7 +1746,7 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     self.statusSub.text = sub;
 
     self.playControl.busy = busy;
-    self.playControl.progress = (self.stage == ECStageFiles || self.stage == ECStageJava) ? self.progress : -1;
+    self.playControl.progress = (self.stage == ECStageFiles || self.stage == ECStagePack || self.stage == ECStageJava) ? self.progress : -1;
     self.playControl.enabled = !self.busy;
     [UIView animateWithDuration:0.6 animations:^{
         self.heroVeil.alpha = busy ? .5 : 0;
@@ -1655,10 +1755,15 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     self.stars.lit = busy ? MAX(0, self.progress) : 0;
 
     if (busy) {
-        NSArray *steps = @[@"Versão", @"Ficheiros", @"Java", @"Iniciar"];
+        NSMutableArray *steps = [@[@"Versão", @"Ficheiros", @"Mods", @"Java", @"Iniciar"] mutableCopy];
+        NSMutableArray *stages = [@[@(ECStageVersion), @(ECStageFiles), @(ECStagePack), @(ECStageJava), @(ECStageLaunching)] mutableCopy];
+        if (!ECPackURL()) {
+            [steps removeObjectAtIndex:2];
+            [stages removeObjectAtIndex:2];
+        }
         NSMutableAttributedString *t = [NSMutableAttributedString new];
         for (NSInteger i = 0; i < steps.count; i++) {
-            ECStage s = (ECStage)(i + 1);
+            ECStage s = (ECStage)[stages[i] integerValue];
             BOOL done = s < self.stage, current = s == self.stage;
             NSString *text = [NSString stringWithFormat:@"%@%@%@", i ? @"     " : @"", done ? @"✓ " : @"", steps[i]];
             [t appendAttributedString:[[NSAttributedString alloc] initWithString:text attributes:@{

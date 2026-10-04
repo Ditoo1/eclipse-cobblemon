@@ -1,0 +1,2 @@
+# Copia este archivo como .dev.vars (no se sube a git) y pon tu contraseña.
+ADMIN_PASSWORD=cambia-esto

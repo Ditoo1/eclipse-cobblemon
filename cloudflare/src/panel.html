@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Panel del pack</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --line:#2a2f3a; --fg:#e7e9ee; --dim:#9aa1ad; --acc:#7c5cff; --ok:#3ecf8e; --bad:#ff5c6c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:8px 0 16px; } h2 { font-size:15px; margin:0 0 10px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:14px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  input, select, button { font:inherit; color:var(--fg); background:#0f1218; border:1px solid var(--line); border-radius:7px; padding:7px 10px; }
+  button { cursor:pointer; background:#232838; } button.primary { background:var(--acc); border-color:var(--acc); }
+  button.danger { color:var(--bad); } button:disabled { opacity:.5; cursor:default; }
+  table { width:100%; border-collapse:collapse; } td, th { padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
+  th { color:var(--dim); font-weight:500; } td.path { word-break:break-all; } td.num { white-space:nowrap; color:var(--dim); }
+  .dim { color:var(--dim); } .ok { color:var(--ok); } .bad { color:var(--bad); }
+  .tag { display:inline-block; padding:1px 7px; border-radius:99px; background:#2a2440; color:#c8b8ff; font-size:12px; }
+  #log { white-space:pre-wrap; font:12px/1.4 ui-monospace, monospace; max-height:180px; overflow:auto; color:var(--dim); }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Panel del pack <span id="pub" class="tag hidden"></span></h1>
+
+  <section id="login" class="card">
+    <h2>Entrar</h2>
+    <form class="row" onsubmit="login(event)">
+      <input id="pw" type="password" placeholder="Contraseña de administrador" autocomplete="current-password" required>
+      <button class="primary">Entrar</button>
+    </form>
+    <p id="loginErr" class="bad"></p>
+  </section>
+
+  <div id="app" class="hidden">
+    <section class="card">
+      <h2>Juego</h2>
+      <div class="row">
+        <span>Minecraft <b id="mc"></b></span>
+        <label>Fabric Loader <select id="loader" onchange="setLoader()"><option value="">— vanilla —</option></select></label>
+        <label>Carpetas exclusivas <input id="exclusive" size="28" placeholder="mods" onchange="setExclusive()"></label>
+      </div>
+      <p class="dim">En las carpetas exclusivas las apps borran todo lo que no esté en el pack (por ejemplo mods que el jugador haya añadido).</p>
+    </section>
+
+    <section class="card">
+      <h2>Subir</h2>
+      <div class="row">
+        <label>Carpeta destino <input id="dest" size="18" placeholder="mods"></label>
+        <label><input type="file" id="files" multiple class="hidden" onchange="upload(this.files, false)"><button onclick="files.click()">Archivos…</button></label>
+        <label><input type="file" id="folder" webkitdirectory class="hidden" onchange="upload(this.files, true)"><button onclick="folder.click()">Carpeta…</button></label>
+      </div>
+      <p class="dim">«Archivos» los pone en la carpeta destino. «Carpeta» conserva su nombre: elige <code>mods</code>, <code>config</code>, <code>resourcepacks</code>… de tu .minecraft (destino vacío). Un archivo con la misma ruta se reemplaza.</p>
+      <div id="log"></div>
+    </section>
+
+    <section class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2>Archivos del borrador <span id="count" class="dim"></span></h2>
+        <div class="row">
+          <input id="filter" placeholder="Filtrar" oninput="render()">
+          <button onclick="saveDraft()">Guardar borrador</button>
+          <button class="primary" onclick="publish()">Publicar</button>
+        </div>
+      </div>
+      <p id="dirty" class="bad hidden">Hay cambios sin guardar.</p>
+      <table>
+        <thead><tr><th>Ruta</th><th>Tamaño</th><th>Modo</th><th>Plataformas</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p class="dim"><b>sync</b>: siempre igual que el servidor. <b>once</b>: se instala si falta y después es del jugador (configs que puede cambiar).</p>
+    </section>
+
+    <section class="card">
+      <h2>Historial</h2>
+      <table><tbody id="history"></tbody></table>
+      <div class="row" style="margin-top:10px">
+        <button onclick="gc()">Limpiar archivos sin uso</button>
+        <span class="dim">Borra de R2 lo que no usa el borrador ni las últimas 10 revisiones.</span>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+const PROTECTED = new Set([".eclipse","saves","screenshots","logs","crash-reports","versions","libraries","assets","accounts","controlmap","options.txt","launcher_profiles.json","launcher_preferences.plist"]);
+let token = sessionStorage.getItem("pack-admin") || "";
+let draft = null, published = null, dirty = false;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const mb = (n) => n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : (n / 1024).toFixed(0) + " KB";
+const log = (msg) => { $("log").textContent += msg + "\n"; $("log").scrollTop = 1e9; };
+
+async function api(path, opts = {}) {
+  const r = await fetch("/v1/admin/" + path, { ...opts, headers: { authorization: "Bearer " + token, ...(opts.headers || {}) } });
+  if (r.status === 401) { logout(); throw new Error("Contraseña incorrecta"); }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+
+async function login(e) {
+  e?.preventDefault();
+  if (e) token = $("pw").value;
+  try {
+    await load();
+    sessionStorage.setItem("pack-admin", token);
+    $("login").classList.add("hidden"); $("app").classList.remove("hidden");
+    loadLoaders();
+  } catch (err) { $("loginErr").textContent = err.message; }
+}
+function logout() { token = ""; sessionStorage.removeItem("pack-admin"); $("app").classList.add("hidden"); $("login").classList.remove("hidden"); }
+
+async function load() {
+  const s = await api("state");
+  draft = s.draft; published = s.published; setDirty(false);
+  $("mc").textContent = draft.minecraft;
+  $("exclusive").value = draft.exclusive.join(", ");
+  const pub = $("pub");
+  pub.classList.toggle("hidden", !published);
+  if (published) pub.textContent = "publicado: revisión " + published.revision;
+  $("history").innerHTML = s.history.map((h) => `<tr><td>Revisión ${h.revision}${published && h.revision === published.revision ? ' <span class="tag">actual</span>' : ""}</td>
+    <td class="dim">${new Date(h.publishedAt).toLocaleString()}</td>
+    <td>${published && h.revision === published.revision ? "" : `<button onclick="rollback(${h.revision})">Volver a esta</button>`}</td></tr>`).join("") || '<tr><td class="dim">Aún no se ha publicado nada.</td></tr>';
+  syncLoaderSelect(); render();
+}
+
+async function loadLoaders() {
+  try {
+    const list = await api("fabric-loaders");
+    const sel = $("loader");
+    sel.innerHTML = '<option value="">— vanilla —</option>' + list.map((l) => `<option value="${esc(l.version)}">${esc(l.version)}${l.stable ? "" : " (beta)"}</option>`).join("");
+    syncLoaderSelect();
+  } catch (err) { log("No se pudo leer la lista de Fabric: " + err.message); }
+}
+function syncLoaderSelect() {
+  const sel = $("loader"), v = draft?.loader?.version || "";
+  if (v && ![...sel.options].some((o) => o.value === v)) sel.add(new Option(v, v));
+  sel.value = v;
+}
+function setLoader() { const v = $("loader").value; draft.loader = v ? { type: "fabric", version: v } : null; setDirty(true); }
+function setExclusive() { draft.exclusive = $("exclusive").value.split(",").map((s) => s.trim().replace(/^\/+|\/+$/g, "")).filter(Boolean); setDirty(true); }
+
+function setDirty(v) { dirty = v; $("dirty").classList.toggle("hidden", !v); }
+window.addEventListener("beforeunload", (e) => { if (dirty) e.preventDefault(); });
+
+function safe(path) {
+  if (!path || path.length > 512 || path.startsWith("/") || /[\\:]/.test(path)) return false;
+  const parts = path.split("/");
+  return !parts.some((p) => !p || p === "." || p === "..") && !PROTECTED.has(parts[0].toLowerCase());
+}
+
+async function sha1Hex(file) {
+  const buf = await crypto.subtle.digest("SHA-1", await file.arrayBuffer());
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function upload(list, keepFolder) {
+  const dest = $("dest").value.trim().replace(/^\/+|\/+$/g, "");
+  const items = [...list].map((f) => {
+    const rel = keepFolder ? f.webkitRelativePath : f.name;
+    return { file: f, path: (dest ? dest + "/" : "") + rel };
+  }).filter(({ path }) => {
+    if (/(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini)$/i.test(path)) return false;
+    if (!safe(path)) { log("✗ Omitido (ruta no permitida): " + path); return false; }
+    return true;
+  });
+  if (!items.length) return;
+  log(`Subiendo ${items.length} archivo(s)…`);
+  let i = 0, ok = 0;
+  const worker = async () => {
+    while (i < items.length) {
+      const { file, path } = items[i++];
+      try {
+        if (file.size > 100 * 1048576) throw new Error("más de 100 MB (límite del plan gratuito)");
+        const sha1 = await sha1Hex(file);
+        const res = await api("objects/" + sha1, { method: "PUT", body: file });
+        upsert({ path, sha1, size: file.size });
+        ok++;
+        log(`${res.existed ? "=" : "✓"} ${path} (${mb(file.size)})`);
+      } catch (err) { log(`✗ ${path}: ${err.message}`); }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  log(`Listo: ${ok}/${items.length}. Recuerda guardar o publicar.`);
+  $("files").value = ""; $("folder").value = "";
+  render();
+}
+
+function upsert(entry) {
+  const key = entry.path.toLowerCase();
+  const old = draft.files.find((f) => f.path.toLowerCase() === key);
+  if (old) { old.path = entry.path; old.sha1 = entry.sha1; old.size = entry.size; }
+  else draft.files.push(entry);
+  setDirty(true);
+}
+
+function render() {
+  const q = $("filter").value.toLowerCase();
+  const files = draft.files.slice().sort((a, b) => a.path.localeCompare(b.path));
+  const shown = files.filter((f) => f.path.toLowerCase().includes(q));
+  const total = files.reduce((n, f) => n + f.size, 0);
+  $("count").textContent = `${files.length} · ${mb(total)}`;
+  $("rows").innerHTML = shown.map((f) => {
+    const p = f.platforms || ["android", "ios"];
+    const id = esc(f.path);
+    return `<tr><td class="path">${id}</td><td class="num">${mb(f.size)}</td>
+      <td><select onchange="edit('${encodeURIComponent(f.path)}','mode',this.value)">
+        <option value="sync"${(f.mode || "sync") === "sync" ? " selected" : ""}>sync</option>
+        <option value="once"${f.mode === "once" ? " selected" : ""}>once</option></select></td>
+      <td><select onchange="edit('${encodeURIComponent(f.path)}','platforms',this.value)">
+        <option value="all"${p.length === 2 ? " selected" : ""}>ambas</option>
+        <option value="android"${p.length === 1 && p[0] === "android" ? " selected" : ""}>Android</option>
+        <option value="ios"${p.length === 1 && p[0] === "ios" ? " selected" : ""}>iOS</option></select></td>
+      <td><button class="danger" onclick="removeFile('${encodeURIComponent(f.path)}')">Quitar</button></td></tr>`;
+  }).join("") || '<tr><td class="dim" colspan="5">Sin archivos.</td></tr>';
+}
+
+function find(enc) { const path = decodeURIComponent(enc); return draft.files.find((f) => f.path === path); }
+function edit(enc, field, value) {
+  const f = find(enc); if (!f) return;
+  if (field === "mode") { if (value === "sync") delete f.mode; else f.mode = value; }
+  if (field === "platforms") { if (value === "all") delete f.platforms; else f.platforms = [value]; }
+  setDirty(true);
+}
+function removeFile(enc) {
+  const path = decodeURIComponent(enc);
+  draft.files = draft.files.filter((f) => f.path !== path);
+  setDirty(true); render();
+}
+
+async function saveDraft() {
+  try { await api("draft", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) }); setDirty(false); log("Borrador guardado."); }
+  catch (err) { alert(err.message); }
+}
+
+async function publish() {
+  if (!confirm("¿Publicar? Los jugadores recibirán estos cambios la próxima vez que abran el juego.")) return;
+  try {
+    await api("draft", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) });
+    const r = await api("publish", { method: "POST" });
+    log("Publicada la revisión " + r.revision + ".");
+    await load();
+  } catch (err) { alert(err.message); }
+}
+
+async function rollback(revision) {
+  if (dirty && !confirm("Perderás los cambios sin guardar del borrador. ¿Seguir?")) return;
+  if (!confirm(`¿Volver a publicar el contenido de la revisión ${revision}? Se crea una revisión nueva.`)) return;
+  try { const r = await api("rollback", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ revision }) }); log("Publicada la revisión " + r.revision + " (copia de la " + revision + ")."); await load(); }
+  catch (err) { alert(err.message); }
+}
+
+async function gc() {
+  if (!confirm("¿Borrar de R2 los archivos que ya no se usan?")) return;
+  try { const r = await api("gc", { method: "POST" }); log(`Limpieza: ${r.deleted} borrados, ${r.kept} en uso.`); }
+  catch (err) { alert(err.message); }
+}
+
+if (token) login();
+</script>
+</body>
+</html>

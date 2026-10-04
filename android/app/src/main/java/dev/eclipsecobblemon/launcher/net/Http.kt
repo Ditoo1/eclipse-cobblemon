@@ -14,7 +14,7 @@ class HttpResponse(val code: Int, val body: String) {
 
 /** Cliente HTTP mínimo sobre HttpURLConnection (sin dependencias extra). */
 object Http {
-    private const val USER_AGENT = "EclipseCobblemon/0.1"
+    const val USER_AGENT = "EclipseCobblemon/1.0"
 
     private fun open(url: String, method: String, headers: Map<String, String>): HttpURLConnection =
         (URL(url).openConnection() as HttpURLConnection).apply {

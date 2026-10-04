@@ -65,8 +65,13 @@ Flujo al pulsar **JUGAR** (`launch/AmethystBridge.kt`):
 La compilación necesita **SDK 37, NDK 27.3.13750724 y AGP 9.3.1 / Gradle 9.6.1**, igual que Amethyst.
 Amethyst es **LGPL-3.0**: si distribuyes el APK, incluye la licencia y el código del módulo `amethyst/`.
 
-## Siguientes pasos (Cobblemon)
+## Pack del servidor (Fabric + mods)
 
-- Instalar Fabric Loader 1.21.1: añadir su perfil JSON a `versions/`. `VersionManager` ya soporta librerías con formato Maven.
-- Descargar el modpack (Cobblemon + Fabric API) en `mods/`.
+- Con `packUrl` en `gradle.properties` (o `-PpackUrl=…`), la app sincroniza el `.minecraft` con el pack que publica el Worker de [`cloudflare/`](../cloudflare/README.md) antes de cada partida.
+- La sincronización instala Fabric Loader, baja solo lo que cambió y borra lo que sobra.
+- Sin internet, no se juega.
+- Reglas: [`docs/pack-sync.md`](../docs/pack-sync.md). Código: `game/PackSync.kt` y `game/Fabric.kt`.
+
+## Siguientes pasos
+
 - Guardar los tokens cifrados (EncryptedSharedPreferences / Keystore).

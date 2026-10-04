@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import dev.eclipsecobblemon.launcher.auth.SkinVariant
+import dev.eclipsecobblemon.launcher.game.PackSync
 import kotlin.math.roundToInt
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -246,7 +247,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
             modifier = Modifier.align(Alignment.CenterHorizontally).width(300.dp).height(40.dp),
         )
         Box(Modifier.fillMaxWidth().height(22.dp), contentAlignment = Alignment.Center) {
-            if (busy) StepLabels(vm.stage)
+            if (busy) StepLabels(vm.stage, vm.packEnabled)
         }
         Spacer(Modifier.height(12.dp))
         NavBar(
@@ -445,6 +446,8 @@ private fun ColumnScope.StatusBlock(vm: LauncherViewModel, busy: Boolean) {
     val acc = vm.account
     val (title, sub) = when {
         busy && vm.stage == Stage.FILES -> "A transferir ficheiros" to "%,d de %,d".format(vm.filesDone, vm.filesTotal).replace(',', '.')
+        busy && vm.stage == Stage.PACK -> "A sincronizar o pack" to
+            if (vm.packTotal > 0) "${PackSync.mb(vm.packDone)} de ${PackSync.mb(vm.packTotal)}" else "A verificar mods e ficheiros…"
         busy && vm.stage == Stage.JAVA -> "A preparar o Java" to (vm.javaProgress?.let { "A instalar · ${(it * 100).toInt()} %" } ?: "A verificar o runtime…")
         busy -> "A preparar o Minecraft ${vm.selectedVersion}" to "A ler a versão…"
         acc == null -> "Bem-vindo" to "Inicie sessão para jogar"
@@ -484,8 +487,14 @@ private fun StarStrip(lit: Float, idle: Boolean, modifier: Modifier) {
 }
 
 @Composable
-private fun StepLabels(stage: Stage) {
-    val steps = listOf("Versão" to Stage.VERSION, "Ficheiros" to Stage.FILES, "Java" to Stage.JAVA, "Iniciar" to Stage.LAUNCHING)
+private fun StepLabels(stage: Stage, withPack: Boolean) {
+    val steps = listOfNotNull(
+        "Versão" to Stage.VERSION,
+        "Ficheiros" to Stage.FILES,
+        ("Mods" to Stage.PACK).takeIf { withPack },
+        "Java" to Stage.JAVA,
+        "Iniciar" to Stage.LAUNCHING,
+    )
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         steps.forEach { (label, s) ->
             val done = s.ordinal < stage.ordinal

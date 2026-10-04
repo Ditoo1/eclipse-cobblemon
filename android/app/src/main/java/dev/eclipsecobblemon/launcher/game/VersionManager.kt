@@ -91,6 +91,15 @@ class VersionManager(val gameDir: File) {
         log("${version.id} instalada ✔")
     }
 
+    /** Librerías de un perfil hijo (p. ej. Fabric) cuya base vanilla ya está instalada. */
+    suspend fun installLibraries(
+        id: String,
+        log: (String) -> Unit,
+        progress: (done: Int, total: Int) -> Unit,
+    ) = withContext(Dispatchers.IO) {
+        downloadAll(libraryTasks(readVersionJson(id)), log, progress)
+    }
+
     private suspend fun downloadAll(
         tasks: List<FileTask>,
         log: (String) -> Unit,
@@ -147,7 +156,11 @@ class VersionManager(val gameDir: File) {
             } else if (!lib.has("downloads")) {
                 // Formato antiguo / Fabric: solo "name" (+ "url" base opcional)
                 val path = mavenPath(name)
-                out += FileTask(lib.optString("url", LIBRARIES).trimEnd('/') + "/" + path, File(librariesDir, path), null)
+                out += FileTask(
+                    lib.optString("url", LIBRARIES).trimEnd('/') + "/" + path,
+                    File(librariesDir, path),
+                    lib.optString("sha1").ifEmpty { null },
+                )
             }
         }
         return out
