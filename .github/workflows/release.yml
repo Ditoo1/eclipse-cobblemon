@@ -78,6 +78,9 @@ jobs:
           name: EclipseCobblemon-android
           path: android-apk
 
+      - name: Notas de la release
+        run: sed "s/{{VERSION}}/${{ steps.ver.outputs.version }}/g" .github/release-notes.md > artifacts/release-notes.md
+
       - name: Draft GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -85,15 +88,7 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: Eclipse Cobblemon ${{ steps.ver.outputs.version }}
           draft: true
-          body: |
-            Eclipse Cobblemon ${{ steps.ver.outputs.version }} para iPhone e Android (Minecraft 1.21.1).
-
-            - `EclipseCobblemon-${{ steps.ver.outputs.version }}-ios.ipa`: SideStore / AltStore.
-            - `EclipseCobblemon-${{ steps.ver.outputs.version }}-ios-trollstore.tipa`: TrollStore.
-            - `EclipseCobblemon-${{ steps.ver.outputs.version }}-android.apk`: Android 8.0 ou superior.
-
-            Requisitos: iOS 14+, JIT ativo. Recomendado: iPhone 12 Pro, 13 Pro, 14 ou superior · Mínimo: iPhone XS.
-            Baseado no Amethyst-iOS e no Amethyst-Android (LGPL-3.0).
+          body_path: artifacts/release-notes.md
           files: |
             android-apk/release/EclipseCobblemon-*-android.apk
             artifacts/*.ipa
