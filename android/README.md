@@ -28,8 +28,8 @@ amethyst-nsbypass/        Dependencia nativa de Amethyst
 
 ```powershell
 .\scripts\build-native.ps1        # Rust → app/src/main/jniLibs (opcional; sin él se usa Kotlin)
-.\gradlew assembleDebug           # APK en app/build/outputs/apk/debug/
-.\gradlew testDebugUnitTest       # Tests Kotlin
+.\gradlew :app:assembleDebug      # APK en app/build/outputs/apk/debug/ (solo :app: :amethyst no se compila suelto)
+.\gradlew :app:testDebugUnitTest  # Tests Kotlin
 cd native; cargo test             # Tests Rust
 ```
 
