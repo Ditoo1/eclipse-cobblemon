@@ -120,7 +120,7 @@
 		<string>shareddocuments</string>
 	</array>
 	<key>ECPackURL</key>
-	<string>https://eclipse-pack.blandt.workers.dev/v1/manifest</string>
+	<string>https://eclipse-pack.tomasdias-267-19.workers.dev/v1/manifest</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>

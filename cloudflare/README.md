@@ -49,9 +49,13 @@ Android bloquea `http://`, así que en el móvil prueba con el Worker ya despleg
    - `wrangler secret put` te pide la contraseña del panel. No la guardes en ningún archivo.
 4. `deploy` imprime la URL: `https://eclipse-pack.<tu-subdominio>.workers.dev`.
 5. Abre `https://eclipse-pack.<tu-subdominio>.workers.dev/admin` y entra con la contraseña.
-6. Elige **Fabric Loader** y sube las carpetas `mods`, `config`… de tu `.minecraft`. Después pulsa **Publicar**.
+6. Sube las carpetas `mods`, `config`… de tu `.minecraft` y pulsa **Publicar**. El Fabric Loader es siempre el último estable: el Worker lo consulta al publicar.
 
    Para cambiar la contraseña, vuelve a ejecutar `npx wrangler secret put ADMIN_PASSWORD`.
+
+   Para cambiar de cuenta de Cloudflare:
+   1. Ejecuta `npx wrangler logout` y después `npx wrangler login`.
+   2. Borra `node_modules/.cache/wrangler`. Si no, wrangler sigue usando la cuenta anterior.
 
 ## 3. Conectar las apps
 
@@ -77,14 +81,20 @@ Al pulsar «Jogar», cada app hace esto:
 
 ## Panel
 
-- **Carpetas exclusivas** (por defecto `mods`): las apps borran ahí todo lo que no esté en el pack.
+Funciona como un gestor de archivos del `.minecraft`. Está en portugués; el selector de la cabecera lo cambia a inglés o español, y el navegador recuerda la elección.
+
+- **Árbol de carpetas** a la izquierda, ruta arriba. Doble clic en una carpeta para entrar.
+- **Subir**: arrastra archivos o carpetas enteras a la lista, o a una carpeta concreta. También puedes usar «Subir archivos» o «Subir carpeta». Se suben en lote, 3 a la vez, con progreso.
+- **Nueva carpeta, renombrar, mover y eliminar**, también con varios elementos seleccionados (Supr borra la selección).
+- **Guardado automático** del borrador. La barra amarilla resume lo que falta por publicar: «Ver cambios» o «Descartar».
+- **Exclusiva** (interruptor en cada carpeta; por defecto `mods`): las apps borran ahí todo lo que no esté en el pack.
 - **Modo**:
   - `sync`: siempre igual que el servidor;
   - `once`: se instala si falta y después lo controla el jugador, útil para configs de cliente.
 - **Plataformas**: un archivo puede ir solo a Android o solo a iOS.
 - **Archivos protegidos**: `saves`, `options.txt`, `screenshots`, `logs`, las cuentas y lo que instala el launcher (`versions`, `libraries`, `assets`) no se pueden subir. Las apps nunca los tocan.
 - **Borrador → Publicar**: los cambios no llegan a nadie hasta que publicas. Cada publicación es una revisión nueva.
-- **Historial → Volver a esta**: vuelve a publicar una revisión anterior. Las apps la reciben como una actualización más.
+- **Historial → Restaurar**: vuelve a publicar una revisión anterior. Las apps la reciben como una actualización más.
 - **Limpiar archivos sin uso**: borra de R2 lo que no usan ni el borrador ni las últimas 10 revisiones.
 
 ## API
@@ -99,7 +109,6 @@ Al pulsar «Jogar», cada app hace esto:
 | PUT | `/v1/admin/draft` | Guardar el borrador |
 | POST | `/v1/admin/publish` | Publicar |
 | POST | `/v1/admin/rollback` | `{"revision": n}` |
-| GET | `/v1/admin/fabric-loaders` | Versiones de Fabric para 1.21.1 |
 | POST | `/v1/admin/gc` | Limpiar objetos sin uso |
 
 Las rutas `/v1/admin/*` piden `Authorization: Bearer <ADMIN_PASSWORD>`.

@@ -8,9 +8,8 @@
 //   GET    /v1/admin/state           borrador, revisión publicada e historial
 //   PUT    /v1/admin/objects/<sha1>  subir un archivo (R2 comprueba el SHA-1)
 //   PUT    /v1/admin/draft           guardar el borrador
-//   POST   /v1/admin/publish         borrador -> manifiesto (revisión + 1)
+//   POST   /v1/admin/publish         borrador -> manifiesto (revisión + 1, con el último Fabric estable)
 //   POST   /v1/admin/rollback        {"revision": n} vuelve a publicar una revisión anterior
-//   GET    /v1/admin/fabric-loaders  versiones de Fabric Loader para 1.21.1
 //   POST   /v1/admin/gc              borra objetos que ya no usa nadie
 //
 // Formato del manifiesto y reglas: docs/pack-sync.md (las apps validan lo mismo).
@@ -28,7 +27,7 @@ const PROTECTED = new Set([
   "options.txt", "launcher_profiles.json", "launcher_preferences.plist",
 ]);
 
-const EMPTY_DRAFT = { format: 1, minecraft: MINECRAFT, loader: null, exclusive: ["mods"], files: [] };
+const EMPTY_DRAFT = { format: 1, minecraft: MINECRAFT, loader: null, exclusive: ["mods"], files: [], folders: [] };
 
 export default {
   async fetch(request, env) {
@@ -109,7 +108,8 @@ async function admin(request, env, route) {
   if (route === "state" && method === "GET") {
     const published = await readJson(env, "manifest.json");
     const draft = (await readJson(env, "draft.json")) || (published ? toDraft(published) : EMPTY_DRAFT);
-    return json({ draft, published, history: await historyList(env) });
+    const latestLoader = await latestFabricLoader().catch(() => null);
+    return json({ draft, published, history: await historyList(env), latestLoader });
   }
 
   const up = route.match(/^objects\/([0-9a-f]{40})$/);
@@ -148,20 +148,27 @@ async function admin(request, env, route) {
     return json({ revision: await publish(env, draft) });
   }
 
-  if (route === "fabric-loaders" && method === "GET") {
-    const r = await fetch(`https://meta.fabricmc.net/v2/versions/loader/${MINECRAFT}`);
-    if (!r.ok) throw httpError(502, "meta.fabricmc.net no responde");
-    const list = await r.json();
-    return json(list.slice(0, 40).map((e) => ({ version: e.loader.version, stable: e.loader.stable })));
-  }
-
   if (route === "gc" && method === "POST") return json(await collectGarbage(env));
 
   throw httpError(404, "Ruta desconocida");
 }
 
-/** Publica el borrador como nueva revisión y la guarda en el historial. */
+/** Última versión estable de Fabric Loader para la versión de Minecraft de las apps. */
+async function latestFabricLoader() {
+  const r = await fetch(`https://meta.fabricmc.net/v2/versions/loader/${MINECRAFT}`);
+  if (!r.ok) throw httpError(502, "meta.fabricmc.net no responde");
+  const entry = (await r.json()).find((e) => e.loader?.stable);
+  const version = entry?.loader?.version;
+  if (!LOADER_VERSION.test(version || "")) throw httpError(502, "meta.fabricmc.net no devolvió ninguna versión estable");
+  return version;
+}
+
+/**
+ * Publica el borrador como nueva revisión y la guarda en el historial.
+ * El loader es siempre el último Fabric estable, se elija lo que se elija en el borrador.
+ */
 async function publish(env, draft) {
+  draft = { ...draft, loader: { type: "fabric", version: await latestFabricLoader() } };
   const current = await readJson(env, "manifest.json");
   const revision = (current?.revision || 0) + 1;
   const manifest = {
@@ -270,13 +277,16 @@ export function validate(d) {
     return out;
   });
   files.sort((a, b) => a.path.localeCompare(b.path));
-  return { format: 1, minecraft: MINECRAFT, loader, exclusive: [...new Set(exclusive)], files };
+  // Carpetas vacías creadas en el panel: solo viven en el borrador, el manifiesto no las lleva
+  const folders = Array.isArray(d.folders) ? d.folders : [];
+  folders.forEach((dir) => isSafePath(dir) || fail(`Carpeta no permitida: ${dir}`));
+  return { format: 1, minecraft: MINECRAFT, loader, exclusive: [...new Set(exclusive)], files, folders: [...new Set(folders)].sort() };
 }
 
 // ---------- Utilidades ----------
 
 function toDraft(m) {
-  return { format: 1, minecraft: m.minecraft, loader: m.loader || null, exclusive: m.exclusive || [], files: m.files || [] };
+  return { format: 1, minecraft: m.minecraft, loader: m.loader || null, exclusive: m.exclusive || [], files: m.files || [], folders: [] };
 }
 
 function objectKey(sha1) {

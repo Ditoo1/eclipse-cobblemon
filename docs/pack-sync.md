@@ -28,7 +28,7 @@ El `.minecraft` de los jugadores es un espejo del pack que publica el owner en e
 | Campo | Significado |
 |---|---|
 | `minecraft` | Debe ser `1.21.1`. Si no, la app pide actualizarse y no lanza el juego. |
-| `loader` | Opcional. Solo `fabric`. Sin él, se lanza vanilla. |
+| `loader` | Solo `fabric`. El Worker pone siempre el último Fabric Loader estable para 1.21.1 al publicar. Sin él (packs antiguos), se lanza vanilla. |
 | `objects` | Base de los archivos, relativa a la URL del manifiesto. El archivo con hash `h` está en `objects/<h[0:2]>/<h>`. |
 | `exclusive` | Carpetas donde se borra todo lo que no esté en `files` (por defecto `["mods"]`). |
 | `files[].mode` | `sync` (por defecto): siempre igual que el servidor. `once`: solo se instala si falta. |

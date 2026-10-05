@@ -1,109 +1,541 @@
 <!doctype html>
-<html lang="es">
+<html lang="pt-PT">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Panel del pack</title>
+<title>Painel do pack</title>
 <style>
-  :root { --bg:#0f1115; --card:#181b22; --line:#2a2f3a; --fg:#e7e9ee; --dim:#9aa1ad; --acc:#7c5cff; --ok:#3ecf8e; --bad:#ff5c6c; }
-  * { box-sizing: border-box; }
-  body { margin:0; font:14px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
-  main { max-width:1100px; margin:0 auto; padding:16px; }
-  h1 { font-size:20px; margin:8px 0 16px; } h2 { font-size:15px; margin:0 0 10px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:14px; }
-  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-  input, select, button { font:inherit; color:var(--fg); background:#0f1218; border:1px solid var(--line); border-radius:7px; padding:7px 10px; }
-  button { cursor:pointer; background:#232838; } button.primary { background:var(--acc); border-color:var(--acc); }
-  button.danger { color:var(--bad); } button:disabled { opacity:.5; cursor:default; }
-  table { width:100%; border-collapse:collapse; } td, th { padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
-  th { color:var(--dim); font-weight:500; } td.path { word-break:break-all; } td.num { white-space:nowrap; color:var(--dim); }
-  .dim { color:var(--dim); } .ok { color:var(--ok); } .bad { color:var(--bad); }
-  .tag { display:inline-block; padding:1px 7px; border-radius:99px; background:#2a2440; color:#c8b8ff; font-size:12px; }
-  #log { white-space:pre-wrap; font:12px/1.4 ui-monospace, monospace; max-height:180px; overflow:auto; color:var(--dim); }
-  .hidden { display:none; }
+  :root {
+    --bg:#0e1014; --panel:#161920; --panel2:#1c2029; --line:#2a2f3a; --fg:#e7e9ee; --dim:#9aa1ad; --faint:#6b7280;
+    --acc:#7c5cff; --acc2:#2a2440; --accfg:#c8b8ff; --ok:#3ecf8e; --okbg:#143326; --warn:#f5b84b; --warnbg:#3a2d12; --bad:#ff5c6c; --badbg:#3a161c;
+    --radius:10px;
+  }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; font:14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--fg); }
+  button, input, select { font:inherit; color:inherit; }
+  input, select { background:#0f1218; border:1px solid var(--line); border-radius:7px; padding:6px 9px; }
+  input:focus, select:focus, button:focus-visible { outline:2px solid var(--acc); outline-offset:1px; }
+  button { cursor:pointer; background:var(--panel2); border:1px solid var(--line); border-radius:7px; padding:6px 11px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+  button:hover { border-color:#3a4150; }
+  button.primary { background:var(--acc); border-color:var(--acc); color:#fff; }
+  button.danger { color:var(--bad); }
+  button.ghost { background:transparent; border-color:transparent; }
+  button.ghost:hover { background:var(--panel2); }
+  button:disabled { opacity:.45; cursor:default; }
+  button.icon { padding:5px; }
+  svg { width:16px; height:16px; flex:none; }
+  .dim { color:var(--dim); } .faint { color:var(--faint); } .bad { color:var(--bad); } .ok { color:var(--ok); }
+  .hidden { display:none !important; }
+  .tag { display:inline-block; padding:0 7px; border-radius:99px; font-size:11.5px; line-height:19px; background:var(--acc2); color:var(--accfg); vertical-align:middle; }
+  .tag.new { background:var(--okbg); color:var(--ok); } .tag.mod { background:var(--warnbg); color:var(--warn); } .tag.del { background:var(--badbg); color:var(--bad); }
+  .tag.plain { background:var(--panel2); color:var(--dim); }
+
+  /* Login */
+  #login { max-width:380px; margin:12vh auto; padding:24px; background:var(--panel); border:1px solid var(--line); border-radius:14px; }
+  #login h1 { margin:0 0 6px; font-size:20px; }
+  #login form { display:flex; gap:8px; margin-top:16px; } #login input { flex:1; }
+  .loginTop { display:flex; align-items:center; gap:10px; } .loginTop h1 { flex:1; }
+  select.lang { padding:4px 6px; font-size:13px; }
+
+  /* Layout */
+  #app { display:flex; flex-direction:column; height:100vh; }
+  header { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0; margin-right:auto; display:flex; align-items:center; gap:8px; }
+  #saveState { font-size:12.5px; }
+  #changesBar { display:flex; align-items:center; gap:10px; padding:8px 16px; background:var(--warnbg); color:var(--warn); border-bottom:1px solid var(--line); flex-wrap:wrap; font-size:13px; }
+  #changesBar button { padding:3px 9px; font-size:13px; }
+  .body { display:grid; grid-template-columns:260px minmax(0, 1fr); min-height:0; flex:1; }
+  aside { border-right:1px solid var(--line); background:var(--panel); overflow:auto; padding:12px 10px; display:flex; flex-direction:column; gap:16px; }
+  aside h2 { font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); margin:0 6px 6px; font-weight:600; }
+  main { display:flex; flex-direction:column; min-width:0; min-height:0; }
+
+  /* Árbol */
+  .tree, .tree ul { list-style:none; margin:0; padding:0; }
+  .tree ul { padding-left:14px; }
+  .node { display:flex; align-items:center; gap:2px; border-radius:6px; }
+  .node:hover { background:var(--panel2); }
+  .node.current { background:var(--acc2); color:var(--accfg); }
+  .node.drop { outline:2px dashed var(--acc); }
+  .caret { width:20px; height:24px; padding:0; border:0; background:transparent; justify-content:center; color:var(--faint); }
+  .caret svg { width:12px; height:12px; transition:transform .12s; }
+  .caret.open svg { transform:rotate(90deg); }
+  .caret.none { visibility:hidden; }
+  .node .go { flex:1; min-width:0; border:0; background:transparent; padding:3px 6px 3px 0; justify-content:flex-start; overflow:hidden; text-overflow:ellipsis; }
+  .node .go span { overflow:hidden; text-overflow:ellipsis; }
+  .settings label { display:flex; flex-direction:column; gap:4px; margin:0 6px 10px; font-size:13px; color:var(--dim); }
+  .settings select { width:100%; color:var(--fg); }
+  .settings .fixed { color:var(--fg); font-weight:600; }
+
+  /* Barra de herramientas */
+  .toolbar { display:flex; align-items:center; gap:8px; padding:10px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .crumbs { display:flex; align-items:center; gap:2px; margin-right:auto; min-width:0; flex-wrap:wrap; font-size:15px; }
+  .crumbs button { border:0; background:transparent; padding:3px 6px; font-weight:500; }
+  .crumbs button:hover { background:var(--panel2); }
+  .crumbs button:last-child { color:var(--fg); font-weight:650; }
+  .crumbs .sep { color:var(--faint); }
+  #search { width:200px; }
+  .selbar { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:15; display:flex; align-items:center; gap:8px; padding:8px 10px 8px 16px; background:#241f3d; color:var(--accfg); border:1px solid #3b3366; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.5); flex-wrap:wrap; font-size:13px; max-width:calc(100vw - 32px); }
+  .selbar select, .selbar button { font-size:13px; padding:4px 8px; }
+
+  /* Lista */
+  #drop { flex:1; overflow:auto; position:relative; padding-bottom:80px; }
+  #drop.over::after { content:attr(data-drop); position:absolute; inset:10px; border:2px dashed var(--acc); border-radius:12px; background:rgba(124,92,255,.08); display:flex; align-items:center; justify-content:center; color:var(--accfg); font-size:16px; pointer-events:none; }
+  table { width:100%; border-collapse:collapse; }
+  th { position:sticky; top:0; background:var(--bg); z-index:1; color:var(--faint); font-weight:500; font-size:12px; text-transform:uppercase; letter-spacing:.04em; text-align:left; padding:8px; border-bottom:1px solid var(--line); }
+  td { padding:6px 8px; border-bottom:1px solid #1d2129; vertical-align:middle; }
+  tr.row:hover td { background:#13161c; }
+  tr.row.picked td { background:#1b1830; }
+  tr.row.drop td { background:rgba(124,92,255,.15); }
+  td.ck, th.ck { width:34px; padding-left:16px; }
+  td.name { word-break:break-all; }
+  td.name .n { display:inline-flex; align-items:center; gap:8px; }
+  td.name button.open { border:0; background:transparent; padding:0; font-weight:550; text-align:left; }
+  td.name button.open:hover { text-decoration:underline; }
+  td.name .path { color:var(--faint); font-size:12px; display:block; margin-left:24px; }
+  td.num { white-space:nowrap; color:var(--dim); font-variant-numeric:tabular-nums; }
+  td.acts { white-space:nowrap; text-align:right; padding-right:14px; }
+  td.acts button, td.acts a { opacity:.55; }
+  tr.row:hover td.acts button, tr.row:hover td.acts a { opacity:1; }
+  td select { padding:3px 6px; font-size:13px; }
+  .ico-dir { color:#e0b154; } .ico-file { color:var(--dim); } .ico-jar { color:#78a9ff; }
+  a.icon { display:inline-flex; padding:5px; color:inherit; border-radius:7px; }
+  a.icon:hover { background:var(--panel2); }
+  .switch { display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--dim); cursor:pointer; }
+  .empty { padding:48px 16px; text-align:center; color:var(--dim); }
+  .empty b { color:var(--fg); }
+  .empty .big { width:40px; height:40px; color:var(--faint); margin-bottom:8px; }
+  .legend { padding:10px 16px; border-top:1px solid var(--line); color:var(--faint); font-size:12.5px; }
+
+  /* Subidas */
+  #uploads { position:fixed; right:16px; bottom:16px; width:380px; max-width:calc(100vw - 32px); background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.45); z-index:20; overflow:hidden; }
+  #uploads .head { display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); }
+  #uploads .head b { margin-right:auto; }
+  #uploads ol { list-style:none; margin:0; padding:4px 0; max-height:260px; overflow:auto; }
+  #uploads li { padding:6px 12px; font-size:12.5px; }
+  #uploads li .t { display:flex; gap:8px; } #uploads li .t span:first-child { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar { height:4px; background:var(--panel2); border-radius:9px; overflow:hidden; margin-top:4px; }
+  .bar i { display:block; height:100%; background:var(--acc); width:0; transition:width .15s; }
+  .bar.ok i { background:var(--ok); } .bar.err i { background:var(--bad); }
+  #uploads.min ol { display:none; }
+
+  /* Diálogos */
+  dialog { background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:14px; padding:0; width:min(480px, calc(100vw - 32px)); }
+  dialog::backdrop { background:rgba(0,0,0,.55); }
+  dialog form { padding:18px; display:flex; flex-direction:column; gap:12px; }
+  dialog h3 { margin:0; font-size:16px; }
+  dialog .acts { display:flex; justify-content:flex-end; gap:8px; }
+  dialog input, dialog select { width:100%; }
+  dialog ul { margin:0; padding-left:18px; max-height:300px; overflow:auto; word-break:break-all; }
+  dialog .list { max-height:340px; overflow:auto; border:1px solid var(--line); border-radius:8px; }
+  dialog .list div { display:flex; align-items:center; gap:8px; padding:7px 10px; border-bottom:1px solid var(--line); }
+  dialog .list div:last-child { border-bottom:0; }
+  dialog .list div span:first-child { flex:1; }
+  #toast { position:fixed; left:50%; top:14px; transform:translateX(-50%); background:#222736; border:1px solid var(--line); padding:9px 14px; border-radius:9px; z-index:30; box-shadow:0 6px 20px rgba(0,0,0,.4); max-width:calc(100vw - 32px); }
+
+  @media (max-width: 760px) {
+    .body { grid-template-columns:1fr; grid-template-rows:auto 1fr; }
+    aside { border-right:0; border-bottom:1px solid var(--line); max-height:34vh; }
+    #search { width:100%; order:9; }
+    th.col-plat, td.col-plat { display:none; }
+    header h1 { width:100%; }
+  }
 </style>
 </head>
 <body>
-<main>
-  <h1>Panel del pack <span id="pub" class="tag hidden"></span></h1>
 
-  <section id="login" class="card">
-    <h2>Entrar</h2>
-    <form class="row" onsubmit="login(event)">
-      <input id="pw" type="password" placeholder="Contraseña de administrador" autocomplete="current-password" required>
-      <button class="primary">Entrar</button>
-    </form>
-    <p id="loginErr" class="bad"></p>
-  </section>
+<section id="login" class="hidden">
+  <div class="loginTop"><h1 data-i18n="title"></h1><select class="lang" aria-label="Idioma"></select></div>
+  <p class="dim" data-i18n="loginSub"></p>
+  <form onsubmit="login(event)">
+    <input id="pw" type="password" data-i18n-ph="pwPh" autocomplete="current-password" required>
+    <button class="primary" data-i18n="enter"></button>
+  </form>
+  <p id="loginErr" class="bad"></p>
+</section>
 
-  <div id="app" class="hidden">
-    <section class="card">
-      <h2>Juego</h2>
-      <div class="row">
-        <span>Minecraft <b id="mc"></b></span>
-        <label>Fabric Loader <select id="loader" onchange="setLoader()"><option value="">— vanilla —</option></select></label>
-        <label>Carpetas exclusivas <input id="exclusive" size="28" placeholder="mods" onchange="setExclusive()"></label>
-      </div>
-      <p class="dim">En las carpetas exclusivas las apps borran todo lo que no esté en el pack (por ejemplo mods que el jugador haya añadido).</p>
-    </section>
+<div id="app" class="hidden">
+  <header>
+    <h1><span data-i18n="title"></span> <span id="pubTag" class="tag plain"></span></h1>
+    <span id="saveState" class="faint"></span>
+    <select class="lang" aria-label="Idioma"></select>
+    <button onclick="openHistory()" data-i18n-title="historyTip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg><span data-i18n="history"></span></button>
+    <button id="publishBtn" class="primary" onclick="publish()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><span></span></button>
+    <button class="ghost icon" onclick="logout()" data-i18n-title="logout">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
+  </header>
 
-    <section class="card">
-      <h2>Subir</h2>
-      <div class="row">
-        <label>Carpeta destino <input id="dest" size="18" placeholder="mods"></label>
-        <label><input type="file" id="files" multiple class="hidden" onchange="upload(this.files, false)"><button onclick="files.click()">Archivos…</button></label>
-        <label><input type="file" id="folder" webkitdirectory class="hidden" onchange="upload(this.files, true)"><button onclick="folder.click()">Carpeta…</button></label>
-      </div>
-      <p class="dim">«Archivos» los pone en la carpeta destino. «Carpeta» conserva su nombre: elige <code>mods</code>, <code>config</code>, <code>resourcepacks</code>… de tu .minecraft (destino vacío). Un archivo con la misma ruta se reemplaza.</p>
-      <div id="log"></div>
-    </section>
-
-    <section class="card">
-      <div class="row" style="justify-content:space-between">
-        <h2>Archivos del borrador <span id="count" class="dim"></span></h2>
-        <div class="row">
-          <input id="filter" placeholder="Filtrar" oninput="render()">
-          <button onclick="saveDraft()">Guardar borrador</button>
-          <button class="primary" onclick="publish()">Publicar</button>
-        </div>
-      </div>
-      <p id="dirty" class="bad hidden">Hay cambios sin guardar.</p>
-      <table>
-        <thead><tr><th>Ruta</th><th>Tamaño</th><th>Modo</th><th>Plataformas</th><th></th></tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
-      <p class="dim"><b>sync</b>: siempre igual que el servidor. <b>once</b>: se instala si falta y después es del jugador (configs que puede cambiar).</p>
-    </section>
-
-    <section class="card">
-      <h2>Historial</h2>
-      <table><tbody id="history"></tbody></table>
-      <div class="row" style="margin-top:10px">
-        <button onclick="gc()">Limpiar archivos sin uso</button>
-        <span class="dim">Borra de R2 lo que no usa el borrador ni las últimas 10 revisiones.</span>
-      </div>
-    </section>
+  <div id="changesBar" class="hidden">
+    <span id="changesText"></span>
+    <button onclick="openChanges()" data-i18n="viewChanges"></button>
+    <button onclick="discard()" data-i18n="discard"></button>
   </div>
-</main>
+
+  <div class="body">
+    <aside>
+      <div>
+        <h2 data-i18n="folders"></h2>
+        <ul id="tree" class="tree"></ul>
+      </div>
+      <div class="settings">
+        <h2 data-i18n="game"></h2>
+        <label>Minecraft <span class="fixed" id="mc"></span></label>
+        <label>Fabric Loader <span class="fixed" id="loader"></span>
+          <span id="loaderNote" class="faint" style="font-size:12px"></span></label>
+      </div>
+    </aside>
+
+    <main>
+      <div class="toolbar">
+        <nav id="crumbs" class="crumbs"></nav>
+        <input id="search" type="search" data-i18n-ph="searchPh" oninput="render()">
+        <button onclick="newFolder()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v6M9 14h6"/></svg><span data-i18n="newFolder"></span></button>
+        <button onclick="$('pickFiles').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg><span data-i18n="uploadFiles"></span></button>
+        <button onclick="$('pickFolder').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 17v-6M9 13l3-3 3 3"/></svg><span data-i18n="uploadFolder"></span></button>
+        <input type="file" id="pickFiles" multiple class="hidden" onchange="pickUpload(this, false)">
+        <input type="file" id="pickFolder" webkitdirectory class="hidden" onchange="pickUpload(this, true)">
+      </div>
+
+      <div id="selbar" class="selbar hidden">
+        <b id="selCount"></b>
+        <button onclick="moveSelection()" data-i18n="moveTo"></button>
+        <select id="bulkMode" onchange="bulkEdit('mode', this)">
+          <option value="" data-i18n="modeDots"></option><option value="sync">sync</option><option value="once">once</option></select>
+        <select id="bulkPlat" onchange="bulkEdit('platforms', this)">
+          <option value="" data-i18n="platDots"></option><option value="all" data-i18n="both"></option><option value="android" data-i18n="onlyAndroid"></option><option value="ios" data-i18n="onlyIos"></option></select>
+        <button class="danger" onclick="deleteSelection()" data-i18n="delete"></button>
+        <button class="ghost" onclick="clearSel()" data-i18n="cancel"></button>
+      </div>
+
+      <div id="drop">
+        <table>
+          <thead><tr>
+            <th class="ck"><input type="checkbox" id="pickAll" onchange="pickAll(this.checked)" data-i18n-aria="selectAll"></th>
+            <th data-i18n="colName"></th><th data-i18n="colSize"></th><th data-i18n="colMode"></th><th class="col-plat" data-i18n="colPlat"></th><th></th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div id="empty" class="empty hidden"></div>
+      </div>
+      <div class="legend" data-i18n-html="legend"></div>
+    </main>
+  </div>
+</div>
+
+<div id="uploads" class="hidden">
+  <div class="head">
+    <b id="upTitle"></b>
+    <button class="ghost icon" onclick="$('uploads').classList.toggle('min')" data-i18n-title="minimize">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+    <button id="upClose" class="ghost icon" onclick="closeUploads()" data-i18n-title="close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div style="padding:0 12px 8px"><div class="bar" id="upTotal"><i></i></div></div>
+  <ol id="upList"></ol>
+</div>
+
+<dialog id="dlgAsk">
+  <form method="dialog">
+    <h3 id="askTitle"></h3>
+    <input id="askInput" autocomplete="off" spellcheck="false">
+    <span id="askErr" class="bad" style="min-height:1.2em;font-size:13px"></span>
+    <div class="acts"><button value="cancel" formnovalidate data-i18n="cancel"></button><button id="askOk" class="primary" value="ok" data-i18n="ok"></button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgMove">
+  <form method="dialog">
+    <h3 data-i18n="moveTitle"></h3>
+    <select id="moveTarget" size="10"></select>
+    <div class="acts"><button value="cancel" data-i18n="cancel"></button><button class="primary" value="ok" data-i18n="move"></button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgChanges">
+  <form method="dialog">
+    <h3 data-i18n="changesTitle"></h3>
+    <div id="changesList"></div>
+    <div class="acts"><button value="cancel" data-i18n="close"></button><button class="primary" value="publish" data-i18n="publish"></button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgHistory">
+  <form method="dialog">
+    <h3 data-i18n="historyTip"></h3>
+    <div id="historyList" class="list"></div>
+    <p class="dim" style="margin:0;font-size:13px" data-i18n="historyHelp"></p>
+    <div class="acts"><button type="button" onclick="gc()" data-i18n="gc"></button><button value="cancel" data-i18n="close"></button></div>
+  </form>
+</dialog>
+
+<div id="toast" class="hidden"></div>
 
 <script>
 const PROTECTED = new Set([".eclipse","saves","screenshots","logs","crash-reports","versions","libraries","assets","accounts","controlmap","options.txt","launcher_profiles.json","launcher_preferences.plist"]);
+const JUNK = /(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini)$/i;
+const MAX_SIZE = 100 * 1048576; // límite de subida del plan gratuito de Workers
+const ICON = {
+  dir: '<svg class="ico-dir" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h3.6l2 2h7.4A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>',
+  file: '<svg class="ico-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>',
+  jar: '<svg class="ico-jar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>',
+  caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 6 6 6-6 6"/></svg>',
+  root: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
+  down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+  upload: '<svg class="big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
+};
+
 let token = sessionStorage.getItem("pack-admin") || "";
-let draft = null, published = null, dirty = false;
+let draft = null, published = null, revisions = [], latestLoader = null;
+let cwd = "";
+const sel = new Set();          // "f:<ruta>" o "d:<ruta>"
+const expanded = new Set();
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const mb = (n) => n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : (n / 1024).toFixed(0) + " KB";
-const log = (msg) => { $("log").textContent += msg + "\n"; $("log").scrollTop = 1e9; };
+const fmt = (n) => n >= 1073741824 ? (n / 1073741824).toFixed(2) + " GB" : n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : n >= 1024 ? Math.round(n / 1024) + " KB" : n + " B";
+const join = (a, b) => a ? a + "/" + b : b;
+const parent = (p) => p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
+const base = (p) => p.slice(p.lastIndexOf("/") + 1);
+const lc = (s) => s.toLowerCase();
+const inside = (p, dir) => lc(p) === lc(dir) || lc(p).startsWith(lc(dir) + "/");
+
+// ---------- Idioma ----------
+
+const LANGS = { pt: ["Português", "pt-PT"], en: ["English", "en"], es: ["Español", "es"] };
+// Valor: texto con {variables}, o {one, other} si depende de {n}
+const I18N = {
+  pt: {
+    title: "Painel do pack", loginSub: "Eclipse Cobblemon · ficheiros sincronizados com as apps.",
+    pwPh: "Palavra-passe de administrador", enter: "Entrar", wrongPw: "Palavra-passe incorreta",
+    history: "Histórico", historyTip: "Revisões publicadas", publish: "Publicar", publishN: "Publicar ({n})", logout: "Sair",
+    viewChanges: "Ver alterações", discard: "Descartar", folders: "Pastas", game: "Jogo",
+    searchPh: "Procurar em todo o pack", newFolder: "Nova pasta", uploadFiles: "Carregar ficheiros", uploadFolder: "Carregar pasta",
+    moveTo: "Mover para…", modeDots: "Modo…", platDots: "Plataformas…", both: "ambas", onlyAndroid: "só Android", onlyIos: "só iOS",
+    delete: "Eliminar", cancel: "Cancelar", ok: "Aceitar", close: "Fechar", minimize: "Minimizar", move: "Mover", moveTitle: "Mover para",
+    selectAll: "Selecionar tudo", select: "Selecionar", colName: "Nome", colSize: "Tamanho", colMode: "Modo", colPlat: "Plataformas",
+    legend: "<b>Exclusiva</b>: as apps apagam dessa pasta tudo o que não estiver no pack (mods que o jogador adicione). <b>sync</b>: sempre igual a aqui. <b>once</b>: instala-se se faltar e depois é do jogador. As alterações guardam-se sozinhas; os jogadores recebem-nas ao <b>Publicar</b>.",
+    changesTitle: "Alterações por publicar", gc: "Limpar ficheiros sem uso",
+    historyHelp: "«Restaurar» volta a publicar o conteúdo de uma revisão como revisão nova. «Limpar» apaga do R2 os ficheiros que não são usados pelo rascunho nem pelas últimas 10 revisões.",
+    dropHere: "Larga para carregar aqui", exclusive: "Exclusiva", exclusiveTip: "As apps apagam desta pasta o que não estiver no pack",
+    pubRev: "revisão {n} publicada", unpublished: "por publicar",
+    loaderFail: "Não foi possível consultar meta.fabricmc.net.", loaderOld: "Publicado: {v}. Atualiza-se ao publicar.", loaderOk: "Sempre a última estável; aplica-se ao publicar.",
+    saved: "✓ Guardado", pending: "Alterações por guardar…", saving: "A guardar…", saveErr: "Não foi possível guardar: {m}",
+    exclChange: "Pastas exclusivas: {a} → {b}", none: "nenhuma",
+    expand: "Expandir", root: "Raiz do pack", tagNew: "novo", tagMod: "modificado", download: "Transferir", rename: "Mudar o nome",
+    nFiles: { one: "{n} ficheiro", other: "{n} ficheiros" }, emptyDir: "vazia",
+    noMatch: "Nada corresponde a «{q}».",
+    emptyFolder: "<b>Pasta vazia</b><br>Arrasta para aqui ficheiros ou pastas, ou usa «Carregar ficheiros».",
+    emptyPack: "<b>O pack está vazio</b><br>Arrasta para aqui as pastas <b>mods</b>, <b>config</b>… do teu .minecraft, ou usa «Carregar pasta».",
+    nSelected: { one: "{n} selecionado", other: "{n} selecionados" },
+    nNew: { one: "{n} novo", other: "{n} novos" }, nModified: { one: "{n} modificado", other: "{n} modificados" },
+    nRemoved: { one: "{n} eliminado", other: "{n} eliminados" }, nSettings: { one: "{n} definição", other: "{n} definições" },
+    unpublishedBar: "Por publicar: {list}. Os jogadores ainda não veem estas alterações.",
+    nUpdated: { one: "{n} ficheiro atualizado.", other: "{n} ficheiros atualizados." },
+    nameEmpty: "Escreve um nome.", nameChars: "O nome tem caracteres não permitidos.",
+    nameProtected: "«{x}» pertence ao jogador ou ao launcher; não pode ser usado.", pathBad: "Caminho não permitido.",
+    nameTaken: "Já existe algo com esse nome aqui.", newFolderIn: "Nova pasta em {d}", folderCreated: "Pasta «{n}» criada.",
+    renameFolder: "Mudar o nome da pasta", renameFile: "Mudar o nome do ficheiro",
+    noSlash: "O nome não pode ter «/». Para mover, usa «Mover para…».", rootOpt: ".minecraft (raiz)",
+    moveClash: "Não é possível mover: já existe «{p}» ou o caminho não é permitido.",
+    nMoved: { one: "{n} elemento movido para {d}.", other: "{n} elementos movidos para {d}." },
+    delFolder: "a pasta «{n}»", delFolderFiles: " e os seus {files}", delItem: "«{n}»", delMany: "{n} elementos ({files})",
+    confirmDel: "Eliminar {what} do pack?\n\nOs jogadores deixam de os ter ao publicar.",
+    blkNew: "Novos", blkMod: "Modificados", blkDel: "Eliminados", blkOther: "Definições",
+    noChanges: "Não há alterações em relação ao publicado.",
+    confirmDiscard: "Descartar todas as alterações e voltar ao publicado?", confirmEmpty: "Esvaziar o rascunho?",
+    waitUploads: "Espera que terminem os carregamentos.",
+    nChanges: { one: "{n} alteração", other: "{n} alterações" },
+    confirmPublish: "Publicar {c}?\n\nOs jogadores recebem-nas da próxima vez que abrirem o jogo.",
+    draftSaveFail: "não foi possível guardar o rascunho", publishedRev: "Publicada a revisão {n}.", publishFail: "Não foi possível publicar: {m}",
+    revision: "Revisão {n}", current: "atual", restore: "Restaurar", noRevisions: "Ainda não foi publicado nada.",
+    confirmRollback: "Voltar a publicar o conteúdo da revisão {n}?\nCria-se uma revisão nova e perdem-se as alterações por publicar.",
+    rolledBack: "Publicada a revisão {r} (cópia da {n}).",
+    confirmGc: "Apagar do R2 os ficheiros que já não são usados?", gcDone: "Limpeza: {d} apagados, {k} em uso.",
+    errPath: "caminho não permitido", errSize: "mais de 100 MB",
+    nSkipped: { one: "{n} ficheiro do sistema ignorado.", other: "{n} ficheiros do sistema ignorados." },
+    uploadErrs: { one: "Carregamento terminado com {n} erro.", other: "Carregamento terminado com {n} erros." },
+    uploadDone: "Carregamento terminado. Revê e carrega em «Publicar».",
+    sessionExpired: "sessão expirada", offline: "sem ligação",
+    upBusy: "A carregar… {d} de {n} prontos", upDone: "Carregamentos: {d} prontos", upErrs: ", {n} com erro",
+    qWait: "em fila", qHash: "a calcular…", qOk: "✓ carregado", qSame: "✓ já existia",
+  },
+  en: {
+    title: "Pack panel", loginSub: "Eclipse Cobblemon · files synced to the apps.",
+    pwPh: "Admin password", enter: "Sign in", wrongPw: "Wrong password",
+    history: "History", historyTip: "Published revisions", publish: "Publish", publishN: "Publish ({n})", logout: "Sign out",
+    viewChanges: "View changes", discard: "Discard", folders: "Folders", game: "Game",
+    searchPh: "Search the whole pack", newFolder: "New folder", uploadFiles: "Upload files", uploadFolder: "Upload folder",
+    moveTo: "Move to…", modeDots: "Mode…", platDots: "Platforms…", both: "both", onlyAndroid: "Android only", onlyIos: "iOS only",
+    delete: "Delete", cancel: "Cancel", ok: "OK", close: "Close", minimize: "Minimize", move: "Move", moveTitle: "Move to",
+    selectAll: "Select all", select: "Select", colName: "Name", colSize: "Size", colMode: "Mode", colPlat: "Platforms",
+    legend: "<b>Exclusive</b>: the apps delete from that folder anything not in the pack (mods the player adds). <b>sync</b>: always identical to this. <b>once</b>: installed if missing, then it belongs to the player. Changes save automatically; players get them when you <b>Publish</b>.",
+    changesTitle: "Changes to publish", gc: "Clean up unused files",
+    historyHelp: "“Restore” republishes a revision’s content as a new revision. “Clean up” deletes from R2 the files used neither by the draft nor by the last 10 revisions.",
+    dropHere: "Drop to upload here", exclusive: "Exclusive", exclusiveTip: "The apps delete from this folder anything not in the pack",
+    pubRev: "revision {n} published", unpublished: "unpublished",
+    loaderFail: "Couldn’t reach meta.fabricmc.net.", loaderOld: "Published: {v}. Updated when you publish.", loaderOk: "Always the latest stable; applied when you publish.",
+    saved: "✓ Saved", pending: "Unsaved changes…", saving: "Saving…", saveErr: "Couldn’t save: {m}",
+    exclChange: "Exclusive folders: {a} → {b}", none: "none",
+    expand: "Expand", root: "Pack root", tagNew: "new", tagMod: "modified", download: "Download", rename: "Rename",
+    nFiles: { one: "{n} file", other: "{n} files" }, emptyDir: "empty",
+    noMatch: "Nothing matches “{q}”.",
+    emptyFolder: "<b>Empty folder</b><br>Drag files or folders here, or use “Upload files”.",
+    emptyPack: "<b>The pack is empty</b><br>Drag the <b>mods</b>, <b>config</b>… folders from your .minecraft here, or use “Upload folder”.",
+    nSelected: { one: "{n} selected", other: "{n} selected" },
+    nNew: { one: "{n} new", other: "{n} new" }, nModified: { one: "{n} modified", other: "{n} modified" },
+    nRemoved: { one: "{n} removed", other: "{n} removed" }, nSettings: { one: "{n} setting", other: "{n} settings" },
+    unpublishedBar: "Unpublished: {list}. Players don’t see these changes yet.",
+    nUpdated: { one: "{n} file updated.", other: "{n} files updated." },
+    nameEmpty: "Enter a name.", nameChars: "The name has characters that aren’t allowed.",
+    nameProtected: "“{x}” belongs to the player or the launcher; it can’t be used.", pathBad: "Path not allowed.",
+    nameTaken: "Something with that name already exists here.", newFolderIn: "New folder in {d}", folderCreated: "Folder “{n}” created.",
+    renameFolder: "Rename folder", renameFile: "Rename file",
+    noSlash: "The name can’t contain “/”. To move it, use “Move to…”.", rootOpt: ".minecraft (root)",
+    moveClash: "Can’t move: “{p}” already exists or the path isn’t allowed.",
+    nMoved: { one: "{n} item moved to {d}.", other: "{n} items moved to {d}." },
+    delFolder: "the folder “{n}”", delFolderFiles: " and its {files}", delItem: "“{n}”", delMany: "{n} items ({files})",
+    confirmDel: "Delete {what} from the pack?\n\nPlayers will lose them when you publish.",
+    blkNew: "New", blkMod: "Modified", blkDel: "Removed", blkOther: "Settings",
+    noChanges: "No changes from what’s published.",
+    confirmDiscard: "Discard all changes and go back to what’s published?", confirmEmpty: "Empty the draft?",
+    waitUploads: "Wait for the uploads to finish.",
+    nChanges: { one: "{n} change", other: "{n} changes" },
+    confirmPublish: "Publish {c}?\n\nPlayers get them the next time they open the game.",
+    draftSaveFail: "couldn’t save the draft", publishedRev: "Revision {n} published.", publishFail: "Couldn’t publish: {m}",
+    revision: "Revision {n}", current: "current", restore: "Restore", noRevisions: "Nothing published yet.",
+    confirmRollback: "Republish the content of revision {n}?\nA new revision is created and unpublished changes are lost.",
+    rolledBack: "Revision {r} published (copy of {n}).",
+    confirmGc: "Delete files that are no longer used from R2?", gcDone: "Cleanup: {d} deleted, {k} in use.",
+    errPath: "path not allowed", errSize: "over 100 MB",
+    nSkipped: { one: "{n} system file skipped.", other: "{n} system files skipped." },
+    uploadErrs: { one: "Upload finished with {n} error.", other: "Upload finished with {n} errors." },
+    uploadDone: "Upload finished. Review and click “Publish”.",
+    sessionExpired: "session expired", offline: "no connection",
+    upBusy: "Uploading… {d} of {n} done", upDone: "Uploads: {d} done", upErrs: ", {n} failed",
+    qWait: "queued", qHash: "hashing…", qOk: "✓ uploaded", qSame: "✓ already there",
+  },
+  es: {
+    title: "Panel del pack", loginSub: "Eclipse Cobblemon · archivos que se sincronizan con las apps.",
+    pwPh: "Contraseña de administrador", enter: "Entrar", wrongPw: "Contraseña incorrecta",
+    history: "Historial", historyTip: "Revisiones publicadas", publish: "Publicar", publishN: "Publicar ({n})", logout: "Salir",
+    viewChanges: "Ver cambios", discard: "Descartar", folders: "Carpetas", game: "Juego",
+    searchPh: "Buscar en todo el pack", newFolder: "Nueva carpeta", uploadFiles: "Subir archivos", uploadFolder: "Subir carpeta",
+    moveTo: "Mover a…", modeDots: "Modo…", platDots: "Plataformas…", both: "ambas", onlyAndroid: "solo Android", onlyIos: "solo iOS",
+    delete: "Eliminar", cancel: "Cancelar", ok: "Aceptar", close: "Cerrar", minimize: "Minimizar", move: "Mover", moveTitle: "Mover a",
+    selectAll: "Seleccionar todo", select: "Seleccionar", colName: "Nombre", colSize: "Tamaño", colMode: "Modo", colPlat: "Plataformas",
+    legend: "<b>Exclusiva</b>: las apps borran de esa carpeta todo lo que no esté en el pack (mods que añada el jugador). <b>sync</b>: siempre igual que aquí. <b>once</b>: se instala si falta y después es del jugador. Los cambios se guardan solos; los jugadores los reciben al <b>Publicar</b>.",
+    changesTitle: "Cambios por publicar", gc: "Limpiar archivos sin uso",
+    historyHelp: "«Restaurar» vuelve a publicar el contenido de una revisión como revisión nueva. «Limpiar» borra de R2 los archivos que no usa el borrador ni las últimas 10 revisiones.",
+    dropHere: "Suelta para subir aquí", exclusive: "Exclusiva", exclusiveTip: "Las apps borran de esta carpeta lo que no esté en el pack",
+    pubRev: "revisión {n} publicada", unpublished: "sin publicar",
+    loaderFail: "No se pudo consultar meta.fabricmc.net.", loaderOld: "Publicado: {v}. Al publicar se actualiza.", loaderOk: "Siempre la última estable; se aplica al publicar.",
+    saved: "✓ Guardado", pending: "Cambios sin guardar…", saving: "Guardando…", saveErr: "No se pudo guardar: {m}",
+    exclChange: "Carpetas exclusivas: {a} → {b}", none: "ninguna",
+    expand: "Expandir", root: "Raíz del pack", tagNew: "nuevo", tagMod: "modificado", download: "Descargar", rename: "Renombrar",
+    nFiles: { one: "{n} archivo", other: "{n} archivos" }, emptyDir: "vacía",
+    noMatch: "Nada coincide con «{q}».",
+    emptyFolder: "<b>Carpeta vacía</b><br>Arrastra aquí archivos o carpetas, o usa «Subir archivos».",
+    emptyPack: "<b>El pack está vacío</b><br>Arrastra aquí las carpetas <b>mods</b>, <b>config</b>… de tu .minecraft, o usa «Subir carpeta».",
+    nSelected: { one: "{n} seleccionado", other: "{n} seleccionados" },
+    nNew: { one: "{n} nuevo", other: "{n} nuevos" }, nModified: { one: "{n} modificado", other: "{n} modificados" },
+    nRemoved: { one: "{n} eliminado", other: "{n} eliminados" }, nSettings: { one: "{n} ajuste", other: "{n} ajustes" },
+    unpublishedBar: "Sin publicar: {list}. Los jugadores aún no ven estos cambios.",
+    nUpdated: { one: "{n} archivo actualizado.", other: "{n} archivos actualizados." },
+    nameEmpty: "Escribe un nombre.", nameChars: "El nombre tiene caracteres no permitidos.",
+    nameProtected: "«{x}» es del jugador o del launcher; no se puede usar.", pathBad: "Ruta no permitida.",
+    nameTaken: "Ya existe algo con ese nombre aquí.", newFolderIn: "Nueva carpeta en {d}", folderCreated: "Carpeta «{n}» creada.",
+    renameFolder: "Renombrar carpeta", renameFile: "Renombrar archivo",
+    noSlash: "El nombre no puede llevar «/». Para mover, usa «Mover a…».", rootOpt: ".minecraft (raíz)",
+    moveClash: "No se puede mover: ya existe «{p}» o la ruta no está permitida.",
+    nMoved: { one: "{n} elemento movido a {d}.", other: "{n} elementos movidos a {d}." },
+    delFolder: "la carpeta «{n}»", delFolderFiles: " y sus {files}", delItem: "«{n}»", delMany: "{n} elementos ({files})",
+    confirmDel: "¿Eliminar {what} del pack?\n\nLos jugadores dejarán de tenerlos al publicar.",
+    blkNew: "Nuevos", blkMod: "Modificados", blkDel: "Eliminados", blkOther: "Ajustes",
+    noChanges: "No hay cambios respecto a lo publicado.",
+    confirmDiscard: "¿Descartar todos los cambios y volver a lo publicado?", confirmEmpty: "¿Vaciar el borrador?",
+    waitUploads: "Espera a que terminen las subidas.",
+    nChanges: { one: "{n} cambio", other: "{n} cambios" },
+    confirmPublish: "¿Publicar {c}?\n\nLos jugadores los recibirán la próxima vez que abran el juego.",
+    draftSaveFail: "no se pudo guardar el borrador", publishedRev: "Publicada la revisión {n}.", publishFail: "No se pudo publicar: {m}",
+    revision: "Revisión {n}", current: "actual", restore: "Restaurar", noRevisions: "Aún no se ha publicado nada.",
+    confirmRollback: "¿Volver a publicar el contenido de la revisión {n}?\nSe crea una revisión nueva y se pierden los cambios sin publicar.",
+    rolledBack: "Publicada la revisión {r} (copia de la {n}).",
+    confirmGc: "¿Borrar de R2 los archivos que ya no se usan?", gcDone: "Limpieza: {d} borrados, {k} en uso.",
+    errPath: "ruta no permitida", errSize: "más de 100 MB",
+    nSkipped: { one: "{n} archivo del sistema ignorado.", other: "{n} archivos del sistema ignorados." },
+    uploadErrs: { one: "Subida terminada con {n} error.", other: "Subida terminada con {n} errores." },
+    uploadDone: "Subida terminada. Revisa y pulsa «Publicar».",
+    sessionExpired: "sesión caducada", offline: "sin conexión",
+    upBusy: "Subiendo… {d} de {n} listos", upDone: "Subidas: {d} listas", upErrs: ", {n} con error",
+    qWait: "en cola", qHash: "calculando…", qOk: "✓ subido", qSame: "✓ ya estaba",
+  },
+};
+
+let lang = "pt";
+try { const l = localStorage.getItem("pack-lang"); if (LANGS[l]) lang = l; } catch {}
+
+function t(key, vars = {}) {
+  let s = I18N[lang][key] ?? I18N.pt[key] ?? key;
+  if (typeof s === "object") s = vars.n === 1 ? s.one : s.other;
+  return s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
+}
+
+function setLang(l) {
+  lang = LANGS[l] ? l : "pt";
+  try { localStorage.setItem("pack-lang", lang); } catch {}
+  applyLang();
+}
+
+/** Traduce los textos fijos y vuelve a pintar lo dinámico. */
+function applyLang() {
+  document.documentElement.lang = LANGS[lang][1];
+  document.title = t("title");
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = t(el.dataset.i18nTitle); });
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
+  document.querySelectorAll("select.lang").forEach((s) => {
+    if (!s.options.length) s.innerHTML = Object.entries(LANGS).map(([k, [name]]) => `<option value="${k}">${name}</option>`).join("");
+    s.value = lang;
+    s.onchange = () => setLang(s.value);
+  });
+  $("drop").dataset.drop = t("dropHere");
+  if (draft) { renderStatus(); render(); }
+  if (setSaveState.state) setSaveState(setSaveState.state, setSaveState.msg);
+  if (queue.length) renderQueue();
+}
+
+function toast(msg, ms = 3200) {
+  const t = $("toast"); t.textContent = msg; t.classList.remove("hidden");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add("hidden"), ms);
+}
+
+function safe(path) {
+  if (!path || path.length > 512 || path.startsWith("/") || /[\\:]/.test(path)) return false;
+  const parts = path.split("/");
+  return !parts.some((p) => !p || p === "." || p === "..") && !PROTECTED.has(lc(parts[0]));
+}
+
+// ---------- API ----------
 
 async function api(path, opts = {}) {
   const r = await fetch("/v1/admin/" + path, { ...opts, headers: { authorization: "Bearer " + token, ...(opts.headers || {}) } });
-  if (r.status === 401) { logout(); throw new Error("Contraseña incorrecta"); }
+  if (r.status === 401) { logout(); throw new Error(t("wrongPw")); }
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || r.statusText);
   return data;
 }
+const putJson = (path, body) => api(path, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+const postJson = (path, body) => api(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body || {}) });
 
 async function login(e) {
   e?.preventDefault();
@@ -112,48 +544,499 @@ async function login(e) {
     await load();
     sessionStorage.setItem("pack-admin", token);
     $("login").classList.add("hidden"); $("app").classList.remove("hidden");
-    loadLoaders();
-  } catch (err) { $("loginErr").textContent = err.message; }
+  } catch (err) {
+    $("login").classList.remove("hidden");
+    $("loginErr").textContent = err.message;
+  }
 }
-function logout() { token = ""; sessionStorage.removeItem("pack-admin"); $("app").classList.add("hidden"); $("login").classList.remove("hidden"); }
+function logout() {
+  token = ""; sessionStorage.removeItem("pack-admin");
+  $("app").classList.add("hidden"); $("login").classList.remove("hidden");
+}
 
 async function load() {
   const s = await api("state");
-  draft = s.draft; published = s.published; setDirty(false);
+  draft = { ...s.draft, folders: s.draft.folders || [] };
+  published = s.published; revisions = s.history;
   $("mc").textContent = draft.minecraft;
-  $("exclusive").value = draft.exclusive.join(", ");
-  const pub = $("pub");
-  pub.classList.toggle("hidden", !published);
-  if (published) pub.textContent = "publicado: revisión " + published.revision;
-  $("history").innerHTML = s.history.map((h) => `<tr><td>Revisión ${h.revision}${published && h.revision === published.revision ? ' <span class="tag">actual</span>' : ""}</td>
-    <td class="dim">${new Date(h.publishedAt).toLocaleString()}</td>
-    <td>${published && h.revision === published.revision ? "" : `<button onclick="rollback(${h.revision})">Volver a esta</button>`}</td></tr>`).join("") || '<tr><td class="dim">Aún no se ha publicado nada.</td></tr>';
-  syncLoaderSelect(); render();
+  // El Worker publica siempre con el último Fabric estable: aquí solo se muestra
+  latestLoader = s.latestLoader;
+  renderStatus();
+  setSaveState("saved");
+  render();
+}
+function renderStatus() {
+  $("pubTag").textContent = published ? t("pubRev", { n: published.revision }) : t("unpublished");
+  const current = published?.loader?.version;
+  $("loader").textContent = latestLoader || current || "—";
+  $("loaderNote").textContent = !latestLoader ? t("loaderFail")
+    : current && current !== latestLoader ? t("loaderOld", { v: current }) : t("loaderOk");
 }
 
-async function loadLoaders() {
+// ---------- Guardado automático ----------
+
+let saveTimer = null, saveChain = Promise.resolve(), version = 0;
+function setSaveState(s, msg) {
+  const el = $("saveState");
+  el.className = s === "error" ? "bad" : "faint";
+  el.textContent = s === "error" ? t("saveErr", { m: msg }) : t(s);
+  setSaveState.state = s; setSaveState.msg = msg;
+}
+function changed() { version++; render(); clearTimeout(saveTimer); setSaveState("pending"); saveTimer = setTimeout(save, 700); }
+/** Guarda el borrador; los guardados van en fila para que «Publicar» espere al último. */
+function save() {
+  clearTimeout(saveTimer);
+  saveChain = saveChain.then(async () => {
+    const v = version;
+    setSaveState("saving");
+    try {
+      await putJson("draft", draft);
+      setSaveState(v === version ? "saved" : "pending");
+      if (v !== version) saveTimer = setTimeout(save, 700);
+    } catch (err) { setSaveState("error", err.message); }
+  });
+  return saveChain;
+}
+window.addEventListener("beforeunload", (e) => { if (setSaveState.state !== "saved" || uploading()) e.preventDefault(); });
+
+// ---------- Modelo: carpetas y archivos ----------
+
+function allFolders() {
+  const out = new Map(); // lc -> ruta
+  const add = (p) => { while (p) { if (!out.has(lc(p))) out.set(lc(p), p); p = parent(p); } };
+  draft.folders.forEach(add);
+  draft.files.forEach((f) => add(parent(f.path)));
+  return out;
+}
+const folderExists = (p) => !p || allFolders().has(lc(p));
+const fileAt = (p) => draft.files.find((f) => lc(f.path) === lc(p));
+const taken = (p) => !!fileAt(p) || allFolders().has(lc(p));
+const isExclusive = (p) => draft.exclusive.some((d) => lc(d) === lc(p));
+
+function listDir(dir) {
+  const dirs = [...allFolders().values()].filter((p) => parent(p) === dir).sort((a, b) => lc(a).localeCompare(lc(b)));
+  const files = draft.files.filter((f) => parent(f.path) === dir).sort((a, b) => lc(a.path).localeCompare(lc(b.path)));
+  return { dirs, files };
+}
+function dirStats(dir) {
+  let n = 0, size = 0;
+  for (const f of draft.files) if (inside(f.path, dir) && lc(f.path) !== lc(dir)) { n++; size += f.size; }
+  return { n, size };
+}
+
+/** Archivos afectados por la selección (los de las carpetas seleccionadas incluidos). */
+function selectedFiles() {
+  const keys = [...sel];
+  return draft.files.filter((f) => keys.some((k) => k === "f:" + f.path || (k.startsWith("d:") && inside(f.path, k.slice(2)))));
+}
+
+function fileStatus(f) {
+  if (!published) return "new";
+  const p = published.files.find((x) => x.path === f.path);
+  if (!p) return "new";
+  return p.sha1 !== f.sha1 || (p.mode || "sync") !== (f.mode || "sync") || String(p.platforms || "") !== String(f.platforms || "") ? "mod" : "";
+}
+
+function changes() {
+  const out = { added: [], modified: [], removed: [], other: [] };
+  const pubFiles = published?.files || [];
+  for (const f of draft.files) { const s = fileStatus(f); if (s === "new") out.added.push(f.path); else if (s === "mod") out.modified.push(f.path); }
+  for (const p of pubFiles) if (!draft.files.some((f) => f.path === p.path)) out.removed.push(p.path);
+  const pubLoader = published?.loader?.version;
+  if (published && latestLoader && pubLoader !== latestLoader) out.other.push(`Fabric Loader: ${pubLoader || "vanilla"} → ${latestLoader}`);
+  const pe = (published?.exclusive || []).slice().sort().join(", "), de = draft.exclusive.slice().sort().join(", ");
+  if (published && pe !== de) out.other.push(t("exclChange", { a: pe || t("none"), b: de || t("none") }));
+  out.total = out.added.length + out.modified.length + out.removed.length + out.other.length;
+  return out;
+}
+
+// ---------- Render ----------
+
+function render() {
+  if (!draft) return;
+  if (cwd && !folderExists(cwd)) cwd = parent(cwd);
+  while (cwd && !folderExists(cwd)) cwd = parent(cwd);
+  for (const k of [...sel]) if (!(k.startsWith("f:") ? fileAt(k.slice(2)) : folderExists(k.slice(2)))) sel.delete(k);
+  renderTree(); renderCrumbs(); renderRows(); renderSel(); renderChanges();
+}
+
+function renderTree() {
+  let p = cwd; while (p) { expanded.add(parent(p)); p = parent(p); }
+  expanded.add("");
+  const folders = [...allFolders().values()];
+  const kids = (dir) => folders.filter((f) => parent(f) === dir).sort((a, b) => lc(a).localeCompare(lc(b)));
+  const node = (path, label, icon) => {
+    const sub = kids(path), open = expanded.has(path);
+    return `<li><div class="node${path === cwd ? " current" : ""}" data-dir="${esc(path)}">
+      <button class="caret${sub.length ? (open ? " open" : "") : " none"}" data-act="toggle" aria-label="${t("expand")}">${ICON.caret}</button>
+      <button class="go" data-act="cd" title="${esc(path || t("root"))}">${icon}<span>${esc(label)}</span>${isExclusive(path) ? ' <span class="tag">excl.</span>' : ""}</button>
+    </div>${sub.length && open ? `<ul>${sub.map((s) => node(s, base(s), ICON.dir)).join("")}</ul>` : ""}</li>`;
+  };
+  $("tree").innerHTML = node("", ".minecraft", ICON.root);
+}
+
+function renderCrumbs() {
+  const parts = cwd ? cwd.split("/") : [];
+  let html = `<button data-dir="">.minecraft</button>`;
+  parts.forEach((part, i) => { html += `<span class="sep">/</span><button data-dir="${esc(parts.slice(0, i + 1).join("/"))}">${esc(part)}</button>`; });
+  $("crumbs").innerHTML = html;
+}
+
+function fileRow(f, showPath) {
+  const k = "f:" + f.path, st = fileStatus(f), p = f.platforms || ["android", "ios"];
+  const plat = p.length === 2 ? "all" : p[0];
+  const icon = /\.jar$/i.test(f.path) ? ICON.jar : ICON.file;
+  return `<tr class="row${sel.has(k) ? " picked" : ""}" data-key="${esc(k)}">
+    <td class="ck"><input type="checkbox" data-act="pick"${sel.has(k) ? " checked" : ""} aria-label="${t("select")}"></td>
+    <td class="name"><span class="n">${icon}<span>${esc(base(f.path))}</span>${st === "new" ? `<span class="tag new">${t("tagNew")}</span>` : st === "mod" ? `<span class="tag mod">${t("tagMod")}</span>` : ""}</span>
+      ${showPath ? `<button class="open path" data-act="cdto" data-dir="${esc(parent(f.path))}">${esc(parent(f.path) || ".minecraft")}</button>` : ""}</td>
+    <td class="num">${fmt(f.size)}</td>
+    <td><select data-act="mode" aria-label="${t("colMode")}"><option value="sync"${(f.mode || "sync") === "sync" ? " selected" : ""}>sync</option><option value="once"${f.mode === "once" ? " selected" : ""}>once</option></select></td>
+    <td class="col-plat"><select data-act="plat" aria-label="${t("colPlat")}">
+      <option value="all"${plat === "all" ? " selected" : ""}>${t("both")}</option>
+      <option value="android"${plat === "android" ? " selected" : ""}>${t("onlyAndroid")}</option>
+      <option value="ios"${plat === "ios" ? " selected" : ""}>${t("onlyIos")}</option></select></td>
+    <td class="acts">
+      <a class="icon" href="/v1/objects/${f.sha1.slice(0, 2)}/${f.sha1}" download="${esc(base(f.path))}" title="${t("download")}">${ICON.down}</a>
+      <button class="ghost icon" data-act="rename" title="${t("rename")}">${ICON.edit}</button>
+      <button class="ghost icon danger" data-act="delete" title="${t("delete")}">${ICON.trash}</button>
+    </td></tr>`;
+}
+
+function dirRow(d) {
+  const k = "d:" + d, s = dirStats(d);
+  return `<tr class="row dir${sel.has(k) ? " picked" : ""}" data-key="${esc(k)}" data-dir="${esc(d)}">
+    <td class="ck"><input type="checkbox" data-act="pick"${sel.has(k) ? " checked" : ""} aria-label="${t("select")}"></td>
+    <td class="name"><span class="n">${ICON.dir}<button class="open" data-act="cdto" data-dir="${esc(d)}">${esc(base(d))}</button></span></td>
+    <td class="num">${s.n ? `${t("nFiles", { n: s.n })} · ${fmt(s.size)}` : t("emptyDir")}</td>
+    <td colspan="2" class="col-excl"><label class="switch" title="${t("exclusiveTip")}">
+      <input type="checkbox" data-act="excl"${isExclusive(d) ? " checked" : ""}> ${t("exclusive")}</label></td>
+    <td class="acts">
+      <button class="ghost icon" data-act="rename" title="${t("rename")}">${ICON.edit}</button>
+      <button class="ghost icon danger" data-act="delete" title="${t("delete")}">${ICON.trash}</button>
+    </td></tr>`;
+}
+
+function visibleKeys() { return [...$("rows").querySelectorAll("tr[data-key]")].map((tr) => tr.dataset.key); }
+
+function renderRows() {
+  const q = lc($("search").value.trim());
+  let html = "", emptyMsg = "";
+  if (q) {
+    const hits = draft.files.filter((f) => lc(f.path).includes(q)).sort((a, b) => lc(a.path).localeCompare(lc(b.path)));
+    html = hits.map((f) => fileRow(f, true)).join("");
+    if (!hits.length) emptyMsg = t("noMatch", { q: esc(q) });
+  } else {
+    const { dirs, files } = listDir(cwd);
+    html = dirs.map(dirRow).join("") + files.map((f) => fileRow(f, false)).join("");
+    if (!dirs.length && !files.length) {
+      emptyMsg = cwd
+        ? `${ICON.upload}<br>${t("emptyFolder")}`
+        : `${ICON.upload}<br>${t("emptyPack")}`;
+    }
+  }
+  $("rows").innerHTML = html;
+  $("empty").innerHTML = emptyMsg;
+  $("empty").classList.toggle("hidden", !emptyMsg);
+  const keys = visibleKeys();
+  $("pickAll").checked = keys.length > 0 && keys.every((k) => sel.has(k));
+  $("pickAll").indeterminate = !$("pickAll").checked && keys.some((k) => sel.has(k));
+}
+
+function renderSel() {
+  $("selbar").classList.toggle("hidden", sel.size === 0);
+  if (!sel.size) return;
+  const files = selectedFiles();
+  $("selCount").textContent = `${t("nSelected", { n: sel.size })} · ${t("nFiles", { n: files.length })}`;
+  $("bulkMode").value = ""; $("bulkPlat").value = "";
+}
+
+function renderChanges() {
+  const c = changes();
+  const bits = [];
+  if (c.added.length) bits.push(t("nNew", { n: c.added.length }));
+  if (c.modified.length) bits.push(t("nModified", { n: c.modified.length }));
+  if (c.removed.length) bits.push(t("nRemoved", { n: c.removed.length }));
+  if (c.other.length) bits.push(t("nSettings", { n: c.other.length }));
+  $("changesBar").classList.toggle("hidden", !c.total);
+  $("changesText").textContent = c.total ? t("unpublishedBar", { list: bits.join(", ") }) : "";
+  $("publishBtn").disabled = !c.total && !!published;
+  $("publishBtn").querySelector("span").textContent = c.total ? t("publishN", { n: c.total }) : t("publish");
+}
+
+// ---------- Eventos ----------
+
+$("tree").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  const dir = b.closest("[data-dir]").dataset.dir;
+  if (b.dataset.act === "toggle") { expanded.has(dir) ? expanded.delete(dir) : expanded.add(dir); renderTree(); }
+  else cd(dir);
+});
+$("crumbs").addEventListener("click", (e) => { const b = e.target.closest("button[data-dir]"); if (b) cd(b.dataset.dir); });
+
+$("rows").addEventListener("click", (e) => {
+  const tr = e.target.closest("tr[data-key]"); if (!tr) return;
+  const key = tr.dataset.key, act = e.target.closest("[data-act]")?.dataset.act;
+  if (act === "cdto") { cd(e.target.closest("[data-dir]").dataset.dir); return; }
+  if (act === "rename") { rename(key); return; }
+  if (act === "delete") { remove([key]); return; }
+  if (act === "pick" || act === "excl" || act === "mode" || act === "plat") return;
+  if (e.target.closest("a, select, label")) return;
+  toggleSel(key, !sel.has(key)); // clic en la fila: seleccionar
+});
+$("rows").addEventListener("dblclick", (e) => { const tr = e.target.closest("tr.dir"); if (tr) cd(tr.dataset.dir); });
+$("rows").addEventListener("change", (e) => {
+  const tr = e.target.closest("tr[data-key]"); if (!tr) return;
+  const key = tr.dataset.key, path = key.slice(2), act = e.target.dataset.act;
+  if (act === "pick") { toggleSel(key, e.target.checked); return; }
+  if (act === "excl") {
+    draft.exclusive = draft.exclusive.filter((d) => lc(d) !== lc(path));
+    if (e.target.checked) { draft.exclusive.push(path); keepFolder(path); }
+    changed(); return;
+  }
+  const f = fileAt(path); if (!f) return;
+  if (act === "mode") setMode(f, e.target.value);
+  if (act === "plat") setPlatforms(f, e.target.value);
+  changed();
+});
+
+document.addEventListener("keydown", (e) => {
+  if ($("app").classList.contains("hidden") || document.querySelector("dialog[open]")) return;
+  if (e.target.closest("input, select, textarea")) return;
+  if ((e.key === "Delete" || e.key === "Backspace") && sel.size) { e.preventDefault(); deleteSelection(); }
+  if (e.key === "Escape") clearSel();
+  if (e.key === "Backspace" && !sel.size && cwd) cd(parent(cwd));
+});
+
+function cd(dir) { cwd = dir; $("search").value = ""; sel.clear(); expanded.add(dir); render(); $("drop").scrollTop = 0; }
+function toggleSel(key, on) { on ? sel.add(key) : sel.delete(key); renderRows(); renderSel(); }
+function pickAll(on) { visibleKeys().forEach((k) => on ? sel.add(k) : sel.delete(k)); renderRows(); renderSel(); }
+function clearSel() { sel.clear(); renderRows(); renderSel(); }
+
+function setMode(f, v) { if (v === "sync") delete f.mode; else f.mode = v; }
+function setPlatforms(f, v) { if (v === "all") delete f.platforms; else f.platforms = [v]; }
+function bulkEdit(field, select) {
+  const v = select.value; if (!v) return;
+  const files = selectedFiles();
+  files.forEach((f) => field === "mode" ? setMode(f, v) : setPlatforms(f, v));
+  toast(t("nUpdated", { n: files.length }));
+  changed();
+}
+
+/** Mantiene una carpeta aunque se quede sin archivos. */
+function keepFolder(p) { if (p && !draft.folders.some((d) => lc(d) === lc(p))) draft.folders.push(p); }
+
+// ---------- Diálogos ----------
+
+function ask(title, value, check) {
+  return new Promise((resolve) => {
+    const dlg = $("dlgAsk"), input = $("askInput"), err = $("askErr");
+    $("askTitle").textContent = title; input.value = value || ""; err.textContent = "";
+    const validate = () => { const m = check(input.value.trim()); err.textContent = m || ""; $("askOk").disabled = !!m; return !m; };
+    input.oninput = validate;
+    // Enter acepta (el primer botón del formulario es «Cancelar»)
+    input.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); if (validate()) dlg.close("ok"); } };
+    dlg.onclose = () => resolve(dlg.returnValue === "ok" && validate() ? input.value.trim() : null);
+    dlg.returnValue = "";
+    dlg.showModal();
+    validate(); err.textContent = ""; // no mostrar el error antes de escribir
+    const dot = (value || "").lastIndexOf(".");
+    input.focus(); input.setSelectionRange(0, dot > 0 ? dot : (value || "").length);
+  });
+}
+
+function nameError(name, dir, current) {
+  if (!name) return t("nameEmpty");
+  if (/[\\:*?"<>|]/.test(name) || name === "." || name === "..") return t("nameChars");
+  const path = join(dir, name);
+  if (!safe(path)) return PROTECTED.has(lc(path.split("/")[0])) ? t("nameProtected", { x: path.split("/")[0] }) : t("pathBad");
+  if ((!current || lc(path) !== lc(current)) && taken(path)) return t("nameTaken");
+  return "";
+}
+
+async function newFolder() {
+  const name = await ask(cwd ? t("newFolderIn", { d: cwd }) : t("newFolder"), "", (n) => nameError(n, cwd));
+  if (!name) return;
+  keepFolder(join(cwd, name));
+  changed();
+  toast(t("folderCreated", { n: name }));
+}
+
+async function rename(key) {
+  const isDir = key.startsWith("d:"), old = key.slice(2);
+  const name = await ask(isDir ? t("renameFolder") : t("renameFile"), base(old), (n) => n.includes("/") ? t("noSlash") : nameError(n, parent(old), old));
+  if (!name || name === base(old)) return;
+  relocate(old, join(parent(old), name), isDir);
+  sel.clear(); changed();
+}
+
+/** Cambia la ruta de un archivo o de una carpeta (con todo su contenido). */
+function relocate(from, to, isDir) {
+  if (!isDir) { const f = fileAt(from); if (f) f.path = to; return; }
+  const re = (p) => inside(p, from) ? to + p.slice(from.length) : p;
+  draft.files.forEach((f) => { f.path = re(f.path); });
+  draft.folders = draft.folders.map(re);
+  draft.exclusive = draft.exclusive.map(re);
+  if (inside(cwd, from)) cwd = re(cwd);
+  keepFolder(to);
+}
+
+function moveSelection() {
+  const keys = [...sel];
+  const dirs = keys.filter((k) => k.startsWith("d:")).map((k) => k.slice(2));
+  const targets = ["", ...[...allFolders().values()].sort((a, b) => lc(a).localeCompare(lc(b)))]
+    .filter((t) => !dirs.some((d) => inside(t, d)));
+  const s = $("moveTarget"), rootOpt = t("rootOpt");
+  s.innerHTML = targets.map((t) => `<option value="${esc(t)}">${esc(t ? ".minecraft/" + t : rootOpt)}</option>`).join("");
+  s.value = targets.includes(cwd) ? cwd : "";
+  const dlg = $("dlgMove");
+  dlg.returnValue = "";
+  s.ondblclick = () => dlg.close("ok");
+  s.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); dlg.close("ok"); } };
+  dlg.onclose = () => {
+    if (dlg.returnValue !== "ok") return;
+    const target = s.value;
+    const moves = keys.map((k) => ({ isDir: k.startsWith("d:"), from: k.slice(2) }))
+      .map((m) => ({ ...m, to: join(target, base(m.from)) }))
+      .filter((m) => lc(m.to) !== lc(m.from));
+    const clash = moves.find((m) => taken(m.to) || !safe(m.to));
+    if (clash) { toast(t("moveClash", { p: clash.to }), 5000); return; }
+    moves.forEach((m) => relocate(m.from, m.to, m.isDir));
+    if (target) keepFolder(target);
+    sel.clear(); changed();
+    toast(t("nMoved", { n: moves.length, d: target || ".minecraft" }));
+  };
+  dlg.showModal();
+}
+
+function remove(keys) {
+  const files = draft.files.filter((f) => keys.some((k) => k === "f:" + f.path || (k.startsWith("d:") && inside(f.path, k.slice(2)))));
+  const dirs = keys.filter((k) => k.startsWith("d:")).map((k) => k.slice(2));
+  const what = keys.length === 1
+    ? (dirs.length ? t("delFolder", { n: base(dirs[0]) }) + (files.length ? t("delFolderFiles", { files: t("nFiles", { n: files.length }) }) : "") : t("delItem", { n: base(keys[0].slice(2)) }))
+    : t("delMany", { n: keys.length, files: t("nFiles", { n: files.length }) });
+  if (!confirm(t("confirmDel", { what }))) return;
+  const gone = new Set(files);
+  draft.files = draft.files.filter((f) => !gone.has(f));
+  draft.folders = draft.folders.filter((p) => !dirs.some((d) => inside(p, d)));
+  draft.exclusive = draft.exclusive.filter((p) => !dirs.some((d) => inside(p, d)));
+  // La carpeta donde estaban los archivos sigue existiendo aunque quede vacía
+  keys.filter((k) => k.startsWith("f:")).forEach((k) => keepFolder(parent(k.slice(2))));
+  dirs.forEach((d) => keepFolder(parent(d)));
+  sel.clear(); changed();
+}
+function deleteSelection() { if (sel.size) remove([...sel]); }
+
+function openChanges() {
+  const c = changes();
+  const block = (title, list, cls) => list.length ? `<p style="margin:0"><span class="tag ${cls}">${title} · ${list.length}</span></p><ul>${list.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : "";
+  $("changesList").innerHTML = (block(t("blkNew"), c.added, "new") + block(t("blkMod"), c.modified, "mod") + block(t("blkDel"), c.removed, "del") + block(t("blkOther"), c.other, "plain"))
+    || `<p class="dim">${t("noChanges")}</p>`;
+  const dlg = $("dlgChanges");
+  dlg.returnValue = "";
+  dlg.onclose = () => { if (dlg.returnValue === "publish") publish(true); };
+  dlg.showModal();
+}
+
+async function discard() {
+  if (!confirm(published ? t("confirmDiscard") : t("confirmEmpty"))) return;
+  draft = published
+    ? { format: 1, minecraft: published.minecraft, loader: published.loader || null, exclusive: [...(published.exclusive || [])], files: published.files.map((f) => ({ ...f })), folders: [] }
+    : { format: 1, minecraft: draft.minecraft, loader: null, exclusive: ["mods"], files: [], folders: [] };
+  sel.clear(); changed();
+}
+
+async function publish(confirmed) {
+  if (uploading()) { toast(t("waitUploads")); return; }
+  const c = changes();
+  if (!confirmed && !confirm(t("confirmPublish", { c: t("nChanges", { n: c.total }) }))) return;
   try {
-    const list = await api("fabric-loaders");
-    const sel = $("loader");
-    sel.innerHTML = '<option value="">— vanilla —</option>' + list.map((l) => `<option value="${esc(l.version)}">${esc(l.version)}${l.stable ? "" : " (beta)"}</option>`).join("");
-    syncLoaderSelect();
-  } catch (err) { log("No se pudo leer la lista de Fabric: " + err.message); }
+    await save();
+    if (setSaveState.state === "error") throw new Error(t("draftSaveFail"));
+    const r = await postJson("publish");
+    await load();
+    toast(t("publishedRev", { n: r.revision }));
+  } catch (err) { alert(t("publishFail", { m: err.message })); }
 }
-function syncLoaderSelect() {
-  const sel = $("loader"), v = draft?.loader?.version || "";
-  if (v && ![...sel.options].some((o) => o.value === v)) sel.add(new Option(v, v));
-  sel.value = v;
+
+function openHistory() {
+  const cur = published?.revision;
+  $("historyList").innerHTML = revisions.map((h) => `<div><span>${t("revision", { n: h.revision })}${h.revision === cur ? ` <span class="tag">${t("current")}</span>` : ""}<br>
+    <span class="faint" style="font-size:12px">${esc(new Date(h.publishedAt).toLocaleString(LANGS[lang][1]))}</span></span>
+    ${h.revision === cur ? "" : `<button type="button" onclick="rollback(${h.revision})">${t("restore")}</button>`}</div>`).join("")
+    || `<div class="dim">${t("noRevisions")}</div>`;
+  $("dlgHistory").showModal();
 }
-function setLoader() { const v = $("loader").value; draft.loader = v ? { type: "fabric", version: v } : null; setDirty(true); }
-function setExclusive() { draft.exclusive = $("exclusive").value.split(",").map((s) => s.trim().replace(/^\/+|\/+$/g, "")).filter(Boolean); setDirty(true); }
 
-function setDirty(v) { dirty = v; $("dirty").classList.toggle("hidden", !v); }
-window.addEventListener("beforeunload", (e) => { if (dirty) e.preventDefault(); });
+async function rollback(revision) {
+  if (!confirm(t("confirmRollback", { n: revision }))) return;
+  try {
+    const r = await postJson("rollback", { revision });
+    $("dlgHistory").close();
+    await load();
+    toast(t("rolledBack", { r: r.revision, n: revision }));
+  } catch (err) { alert(err.message); }
+}
 
-function safe(path) {
-  if (!path || path.length > 512 || path.startsWith("/") || /[\\:]/.test(path)) return false;
-  const parts = path.split("/");
-  return !parts.some((p) => !p || p === "." || p === "..") && !PROTECTED.has(parts[0].toLowerCase());
+async function gc() {
+  if (!confirm(t("confirmGc"))) return;
+  try { const r = await postJson("gc"); toast(t("gcDone", { d: r.deleted, k: r.kept })); }
+  catch (err) { alert(err.message); }
+}
+
+// ---------- Subidas ----------
+
+const queue = [];
+let active = 0;
+const uploading = () => queue.some((i) => i.state === "wait" || i.state === "hash" || i.state === "up");
+
+function pickUpload(input, keepFolder) {
+  enqueue([...input.files].map((f) => ({ file: f, rel: keepFolder ? f.webkitRelativePath : f.name })), cwd);
+  input.value = "";
+}
+
+/** {file, rel}[] -> cola. rel es la ruta relativa a la carpeta destino. */
+function enqueue(list, dir, emptyDirs = []) {
+  emptyDirs.forEach((d) => { const p = join(dir, d); if (safe(p)) keepFolder(p); });
+  let skipped = 0;
+  for (const { file, rel } of list) {
+    const path = join(dir, rel);
+    if (JUNK.test(path)) { skipped++; continue; }
+    const item = { file, path, size: file.size, sent: 0, state: "wait", msg: "" };
+    if (!safe(path)) { item.state = "err"; item.msg = t("errPath"); }
+    else if (file.size > MAX_SIZE) { item.state = "err"; item.msg = t("errSize"); }
+    queue.push(item);
+  }
+  if (emptyDirs.length) changed();
+  $("uploads").classList.remove("hidden", "min");
+  renderQueue(); pump();
+  if (skipped) toast(t("nSkipped", { n: skipped }));
+}
+
+function pump() {
+  while (active < 3) {
+    const item = queue.find((i) => i.state === "wait");
+    if (!item) break;
+    active++;
+    runUpload(item).finally(() => {
+      active--;
+      pump();
+      if (!uploading()) { changed(); const errs = queue.filter((i) => i.state === "err").length; toast(errs ? t("uploadErrs", { n: errs }) : t("uploadDone")); }
+    });
+  }
+}
+
+async function runUpload(item) {
+  try {
+    item.state = "hash"; renderQueue();
+    const sha1 = await sha1Hex(item.file);
+    item.state = "up"; renderQueue();
+    const res = await putObject(sha1, item.file, (n) => { item.sent = n; renderQueueSoon(); });
+    upsert({ path: item.path, sha1, size: item.size });
+    item.state = res.existed ? "same" : "ok"; item.sent = item.size;
+    render();
+  } catch (err) { item.state = "err"; item.msg = err.message; }
+  renderQueue();
 }
 
 async function sha1Hex(file) {
@@ -161,109 +1044,108 @@ async function sha1Hex(file) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function upload(list, keepFolder) {
-  const dest = $("dest").value.trim().replace(/^\/+|\/+$/g, "");
-  const items = [...list].map((f) => {
-    const rel = keepFolder ? f.webkitRelativePath : f.name;
-    return { file: f, path: (dest ? dest + "/" : "") + rel };
-  }).filter(({ path }) => {
-    if (/(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini)$/i.test(path)) return false;
-    if (!safe(path)) { log("✗ Omitido (ruta no permitida): " + path); return false; }
-    return true;
+function putObject(sha1, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open("PUT", "/v1/admin/objects/" + sha1);
+    x.setRequestHeader("authorization", "Bearer " + token);
+    x.upload.onprogress = (e) => onProgress(e.loaded);
+    x.onload = () => {
+      let data = {}; try { data = JSON.parse(x.responseText); } catch {}
+      if (x.status === 401) { logout(); reject(new Error(t("sessionExpired"))); }
+      else if (x.status >= 200 && x.status < 300) resolve(data);
+      else reject(new Error(data.error || "HTTP " + x.status));
+    };
+    x.onerror = () => reject(new Error(t("offline")));
+    x.send(file);
   });
-  if (!items.length) return;
-  log(`Subiendo ${items.length} archivo(s)…`);
-  let i = 0, ok = 0;
-  const worker = async () => {
-    while (i < items.length) {
-      const { file, path } = items[i++];
-      try {
-        if (file.size > 100 * 1048576) throw new Error("más de 100 MB (límite del plan gratuito)");
-        const sha1 = await sha1Hex(file);
-        const res = await api("objects/" + sha1, { method: "PUT", body: file });
-        upsert({ path, sha1, size: file.size });
-        ok++;
-        log(`${res.existed ? "=" : "✓"} ${path} (${mb(file.size)})`);
-      } catch (err) { log(`✗ ${path}: ${err.message}`); }
-    }
-  };
-  await Promise.all([worker(), worker(), worker()]);
-  log(`Listo: ${ok}/${items.length}. Recuerda guardar o publicar.`);
-  $("files").value = ""; $("folder").value = "";
-  render();
 }
 
 function upsert(entry) {
-  const key = entry.path.toLowerCase();
-  const old = draft.files.find((f) => f.path.toLowerCase() === key);
+  const old = fileAt(entry.path);
   if (old) { old.path = entry.path; old.sha1 = entry.sha1; old.size = entry.size; }
   else draft.files.push(entry);
-  setDirty(true);
 }
 
-function render() {
-  const q = $("filter").value.toLowerCase();
-  const files = draft.files.slice().sort((a, b) => a.path.localeCompare(b.path));
-  const shown = files.filter((f) => f.path.toLowerCase().includes(q));
-  const total = files.reduce((n, f) => n + f.size, 0);
-  $("count").textContent = `${files.length} · ${mb(total)}`;
-  $("rows").innerHTML = shown.map((f) => {
-    const p = f.platforms || ["android", "ios"];
-    const id = esc(f.path);
-    return `<tr><td class="path">${id}</td><td class="num">${mb(f.size)}</td>
-      <td><select onchange="edit('${encodeURIComponent(f.path)}','mode',this.value)">
-        <option value="sync"${(f.mode || "sync") === "sync" ? " selected" : ""}>sync</option>
-        <option value="once"${f.mode === "once" ? " selected" : ""}>once</option></select></td>
-      <td><select onchange="edit('${encodeURIComponent(f.path)}','platforms',this.value)">
-        <option value="all"${p.length === 2 ? " selected" : ""}>ambas</option>
-        <option value="android"${p.length === 1 && p[0] === "android" ? " selected" : ""}>Android</option>
-        <option value="ios"${p.length === 1 && p[0] === "ios" ? " selected" : ""}>iOS</option></select></td>
-      <td><button class="danger" onclick="removeFile('${encodeURIComponent(f.path)}')">Quitar</button></td></tr>`;
-  }).join("") || '<tr><td class="dim" colspan="5">Sin archivos.</td></tr>';
+let queueFrame = 0;
+function renderQueueSoon() { if (!queueFrame) queueFrame = requestAnimationFrame(() => { queueFrame = 0; renderQueue(); }); }
+function renderQueue() {
+  const done = queue.filter((i) => i.state === "ok" || i.state === "same").length;
+  const errs = queue.filter((i) => i.state === "err").length;
+  const total = queue.reduce((n, i) => n + i.size, 0) || 1;
+  const sent = queue.reduce((n, i) => n + (i.state === "err" ? i.size : i.sent), 0);
+  const busy = uploading();
+  $("upTitle").textContent = busy ? t("upBusy", { d: done, n: queue.length - errs }) : t("upDone", { d: done }) + (errs ? t("upErrs", { n: errs }) : "");
+  $("upTotal").className = "bar" + (!busy ? (errs ? " err" : " ok") : "");
+  $("upTotal").firstElementChild.style.width = (100 * sent / total).toFixed(1) + "%";
+  $("upClose").disabled = busy;
+  const label = { wait: t("qWait"), hash: t("qHash"), up: "", ok: t("qOk"), same: t("qSame"), err: "" };
+  $("upList").innerHTML = queue.slice().reverse().map((i) => `<li><div class="t"><span title="${esc(i.path)}">${esc(i.path)}</span>
+    <span class="${i.state === "err" ? "bad" : i.state === "ok" || i.state === "same" ? "ok" : "faint"}">${i.state === "err" ? "✗ " + esc(i.msg) : i.state === "up" ? Math.floor(100 * i.sent / (i.size || 1)) + "%" : label[i.state]}</span></div>
+    ${i.state === "up" || i.state === "hash" ? `<div class="bar"><i style="width:${(100 * i.sent / (i.size || 1)).toFixed(1)}%"></i></div>` : ""}</li>`).join("");
+}
+function closeUploads() { if (uploading()) return; queue.length = 0; $("uploads").classList.add("hidden"); }
+
+// Arrastrar y soltar: sobre la lista sube a la carpeta actual; sobre una carpeta, dentro de ella
+const drop = $("drop");
+let dragDepth = 0;
+function dropTargetEl(e) { return e.target.closest?.("tr.dir"); }
+drop.addEventListener("dragenter", (e) => { if (![...e.dataTransfer.types].includes("Files")) return; e.preventDefault(); dragDepth++; drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; drop.classList.remove("over"); drop.querySelectorAll("tr.drop").forEach((t) => t.classList.remove("drop")); } });
+drop.addEventListener("dragover", (e) => {
+  if (![...e.dataTransfer.types].includes("Files")) return;
+  e.preventDefault();
+  const t = dropTargetEl(e);
+  drop.querySelectorAll("tr.drop").forEach((r) => r !== t && r.classList.remove("drop"));
+  t?.classList.add("drop");
+  drop.classList.toggle("over", !t);
+});
+drop.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  dragDepth = 0; drop.classList.remove("over");
+  const t = dropTargetEl(e);
+  drop.querySelectorAll("tr.drop").forEach((r) => r.classList.remove("drop"));
+  const dir = t ? t.dataset.dir : cwd;
+  const { files, dirs } = await readDrop(e.dataTransfer);
+  if (files.length || dirs.length) enqueue(files, dir, dirs);
+});
+// Soltar sobre una carpeta del árbol
+$("tree").addEventListener("dragover", (e) => { const n = e.target.closest(".node"); if (!n || ![...e.dataTransfer.types].includes("Files")) return; e.preventDefault(); n.classList.add("drop"); });
+$("tree").addEventListener("dragleave", (e) => e.target.closest(".node")?.classList.remove("drop"));
+$("tree").addEventListener("drop", async (e) => {
+  const n = e.target.closest(".node"); if (!n) return;
+  e.preventDefault(); n.classList.remove("drop");
+  const { files, dirs } = await readDrop(e.dataTransfer);
+  if (files.length || dirs.length) enqueue(files, n.dataset.dir, dirs);
+});
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("drop", (e) => e.preventDefault());
+
+/** Lee archivos y carpetas soltados (con subcarpetas). Devuelve rutas relativas. */
+async function readDrop(dt) {
+  const entries = [...dt.items].filter((i) => i.kind === "file").map((i) => i.webkitGetAsEntry?.()).filter(Boolean);
+  if (!entries.length) return { files: [...dt.files].map((f) => ({ file: f, rel: f.name })), dirs: [] };
+  const files = [], dirs = [];
+  async function walk(entry, prefix) {
+    if (entry.isFile) {
+      files.push({ file: await new Promise((res, rej) => entry.file(res, rej)), rel: prefix + entry.name });
+    } else if (entry.isDirectory) {
+      const path = prefix + entry.name;
+      dirs.push(path);
+      const reader = entry.createReader();
+      for (;;) {
+        const batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+        if (!batch.length) break;
+        for (const child of batch) await walk(child, path + "/");
+      }
+    }
+  }
+  for (const entry of entries) await walk(entry, "");
+  return { files, dirs };
 }
 
-function find(enc) { const path = decodeURIComponent(enc); return draft.files.find((f) => f.path === path); }
-function edit(enc, field, value) {
-  const f = find(enc); if (!f) return;
-  if (field === "mode") { if (value === "sync") delete f.mode; else f.mode = value; }
-  if (field === "platforms") { if (value === "all") delete f.platforms; else f.platforms = [value]; }
-  setDirty(true);
-}
-function removeFile(enc) {
-  const path = decodeURIComponent(enc);
-  draft.files = draft.files.filter((f) => f.path !== path);
-  setDirty(true); render();
-}
-
-async function saveDraft() {
-  try { await api("draft", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) }); setDirty(false); log("Borrador guardado."); }
-  catch (err) { alert(err.message); }
-}
-
-async function publish() {
-  if (!confirm("¿Publicar? Los jugadores recibirán estos cambios la próxima vez que abran el juego.")) return;
-  try {
-    await api("draft", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) });
-    const r = await api("publish", { method: "POST" });
-    log("Publicada la revisión " + r.revision + ".");
-    await load();
-  } catch (err) { alert(err.message); }
-}
-
-async function rollback(revision) {
-  if (dirty && !confirm("Perderás los cambios sin guardar del borrador. ¿Seguir?")) return;
-  if (!confirm(`¿Volver a publicar el contenido de la revisión ${revision}? Se crea una revisión nueva.`)) return;
-  try { const r = await api("rollback", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ revision }) }); log("Publicada la revisión " + r.revision + " (copia de la " + revision + ")."); await load(); }
-  catch (err) { alert(err.message); }
-}
-
-async function gc() {
-  if (!confirm("¿Borrar de R2 los archivos que ya no se usan?")) return;
-  try { const r = await api("gc", { method: "POST" }); log(`Limpieza: ${r.deleted} borrados, ${r.kept} en uso.`); }
-  catch (err) { alert(err.message); }
-}
-
-if (token) login();
+applyLang();
+if (token) login(); else $("login").classList.remove("hidden");
 </script>
 </body>
 </html>
