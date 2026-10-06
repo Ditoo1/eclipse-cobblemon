@@ -279,7 +279,8 @@
 <script>
 const PROTECTED = new Set([".eclipse","saves","screenshots","logs","crash-reports","versions","libraries","assets","accounts","controlmap","options.txt","launcher_profiles.json","launcher_preferences.plist"]);
 const JUNK = /(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini)$/i;
-const MAX_SIZE = 100 * 1048576; // límite de subida del plan gratuito de Workers
+const SINGLE_MAX = 95 * 1048576; // por encima, subida por partes (Workers acepta hasta 100 MB por petición)
+const MAX_SIZE = 1024 * 1048576; // el SHA-1 se calcula con el archivo entero en memoria
 const ICON = {
   dir: '<svg class="ico-dir" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h3.6l2 2h7.4A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>',
   file: '<svg class="ico-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>',
@@ -359,7 +360,7 @@ const I18N = {
     confirmRollback: "Voltar a publicar o conteúdo da revisão {n}?\nCria-se uma revisão nova e perdem-se as alterações por publicar.",
     rolledBack: "Publicada a revisão {r} (cópia da {n}).",
     confirmGc: "Apagar do R2 os ficheiros que já não são usados?", gcDone: "Limpeza: {d} apagados, {k} em uso.",
-    errPath: "caminho não permitido", errSize: "mais de 100 MB",
+    errPath: "caminho não permitido", errSize: "mais de 1 GB",
     nSkipped: { one: "{n} ficheiro do sistema ignorado.", other: "{n} ficheiros do sistema ignorados." },
     uploadErrs: { one: "Carregamento terminado com {n} erro.", other: "Carregamento terminado com {n} erros." },
     uploadDone: "Carregamento terminado. Revê e carrega em «Publicar».",
@@ -414,7 +415,7 @@ const I18N = {
     confirmRollback: "Republish the content of revision {n}?\nA new revision is created and unpublished changes are lost.",
     rolledBack: "Revision {r} published (copy of {n}).",
     confirmGc: "Delete files that are no longer used from R2?", gcDone: "Cleanup: {d} deleted, {k} in use.",
-    errPath: "path not allowed", errSize: "over 100 MB",
+    errPath: "path not allowed", errSize: "over 1 GB",
     nSkipped: { one: "{n} system file skipped.", other: "{n} system files skipped." },
     uploadErrs: { one: "Upload finished with {n} error.", other: "Upload finished with {n} errors." },
     uploadDone: "Upload finished. Review and click “Publish”.",
@@ -469,7 +470,7 @@ const I18N = {
     confirmRollback: "¿Volver a publicar el contenido de la revisión {n}?\nSe crea una revisión nueva y se pierden los cambios sin publicar.",
     rolledBack: "Publicada la revisión {r} (copia de la {n}).",
     confirmGc: "¿Borrar de R2 los archivos que ya no se usan?", gcDone: "Limpieza: {d} borrados, {k} en uso.",
-    errPath: "ruta no permitida", errSize: "más de 100 MB",
+    errPath: "ruta no permitida", errSize: "más de 1 GB",
     nSkipped: { one: "{n} archivo del sistema ignorado.", other: "{n} archivos del sistema ignorados." },
     uploadErrs: { one: "Subida terminada con {n} error.", other: "Subida terminada con {n} errores." },
     uploadDone: "Subida terminada. Revisa y pulsa «Publicar».",
@@ -528,7 +529,7 @@ function safe(path) {
 // ---------- API ----------
 
 async function api(path, opts = {}) {
-  const r = await fetch("/v1/admin/" + path, { ...opts, headers: { authorization: "Bearer " + token, ...(opts.headers || {}) } });
+  const r = await fetch("/v1/admin/" + path, { ...opts, headers: { authorization: "Bearer " + token, "x-lang": lang, ...(opts.headers || {}) } });
   if (r.status === 401) { logout(); throw new Error(t("wrongPw")); }
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || r.statusText);
@@ -1044,12 +1045,44 @@ async function sha1Hex(file) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Sube un archivo. Hasta 95 MB, de una vez (R2 comprueba el SHA-1); si es mayor, por partes. */
 function putObject(sha1, file, onProgress) {
+  if (file.size <= SINGLE_MAX) return send("PUT", "/v1/admin/objects/" + sha1, file, onProgress);
+  return putMultipart(sha1, file, onProgress);
+}
+
+async function putMultipart(sha1, file, onProgress) {
+  const start = await postJson("uploads", { sha1, size: file.size });
+  if (start.existed) return start;
+  const q = "?upload=" + encodeURIComponent(start.uploadId);
+  const parts = [];
+  try {
+    for (let i = 0, off = 0; off < file.size; i++, off += start.partSize) {
+      const blob = file.slice(off, off + start.partSize);
+      // Cada parte se reintenta: una caída de red no obliga a empezar de cero
+      for (let attempt = 1; ; attempt++) {
+        try {
+          parts.push(await send("PUT", `/v1/admin/uploads/${sha1}${q}&part=${i + 1}`, blob, (n) => onProgress(off + n)));
+          break;
+        } catch (err) { if (attempt >= 3 || !token) throw err; }
+      }
+    }
+    return await send("POST", `/v1/admin/uploads/${sha1}/complete${q}`, JSON.stringify({ parts, size: file.size }), null, "application/json");
+  } catch (err) {
+    send("DELETE", `/v1/admin/uploads/${sha1}${q}`).catch(() => {});
+    throw err;
+  }
+}
+
+/** XHR (fetch no informa del progreso de subida). */
+function send(method, url, body, onProgress, type) {
   return new Promise((resolve, reject) => {
     const x = new XMLHttpRequest();
-    x.open("PUT", "/v1/admin/objects/" + sha1);
+    x.open(method, url);
     x.setRequestHeader("authorization", "Bearer " + token);
-    x.upload.onprogress = (e) => onProgress(e.loaded);
+    x.setRequestHeader("x-lang", lang);
+    if (type) x.setRequestHeader("content-type", type);
+    if (onProgress) x.upload.onprogress = (e) => onProgress(e.loaded);
     x.onload = () => {
       let data = {}; try { data = JSON.parse(x.responseText); } catch {}
       if (x.status === 401) { logout(); reject(new Error(t("sessionExpired"))); }
@@ -1057,7 +1090,7 @@ function putObject(sha1, file, onProgress) {
       else reject(new Error(data.error || "HTTP " + x.status));
     };
     x.onerror = () => reject(new Error(t("offline")));
-    x.send(file);
+    x.send(body);
   });
 }
 

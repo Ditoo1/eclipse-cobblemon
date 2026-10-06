@@ -14,7 +14,7 @@ Solo usa Cloudflare, y cabe en el plan gratuito:
 |---|---|
 | R2 | 10 GB, descargas sin coste de salida |
 | Workers | 100 000 peticiones/día |
-| Subida por archivo | 100 MB |
+| Subida por petición | 100 MB (el panel sube por partes los archivos mayores, hasta 1 GB) |
 
 ## 1. Probar en local (sin cuenta)
 
@@ -84,7 +84,7 @@ Al pulsar «Jogar», cada app hace esto:
 Funciona como un gestor de archivos del `.minecraft`. Está en portugués; el selector de la cabecera lo cambia a inglés o español, y el navegador recuerda la elección.
 
 - **Árbol de carpetas** a la izquierda, ruta arriba. Doble clic en una carpeta para entrar.
-- **Subir**: arrastra archivos o carpetas enteras a la lista, o a una carpeta concreta. También puedes usar «Subir archivos» o «Subir carpeta». Se suben en lote, 3 a la vez, con progreso.
+- **Subir**: arrastra archivos o carpetas enteras a la lista, o a una carpeta concreta. También puedes usar «Subir archivos» o «Subir carpeta». Se suben en lote, 3 a la vez, con progreso. Los archivos de más de 95 MB se suben en partes de 50 MB, hasta 1 GB por archivo.
 - **Nueva carpeta, renombrar, mover y eliminar**, también con varios elementos seleccionados (Supr borra la selección).
 - **Guardado automático** del borrador. La barra amarilla resume lo que falta por publicar: «Ver cambios» o «Descartar».
 - **Exclusiva** (interruptor en cada carpeta; por defecto `mods`): las apps borran ahí todo lo que no esté en el pack.
@@ -106,6 +106,10 @@ Funciona como un gestor de archivos del `.minecraft`. Está en portugués; el se
 | GET | `/admin` | Panel |
 | GET | `/v1/admin/state` | Borrador, manifiesto e historial |
 | PUT | `/v1/admin/objects/<sha1>` | Subir un archivo (R2 rechaza la subida si el SHA-1 no coincide) |
+| POST | `/v1/admin/uploads` | `{sha1, size}`: empieza una subida por partes |
+| PUT | `/v1/admin/uploads/<sha1>?upload=<id>&part=<n>` | Subir una parte (máx. 100 MB) |
+| POST | `/v1/admin/uploads/<sha1>/complete?upload=<id>` | `{parts, size}`: cerrar la subida |
+| DELETE | `/v1/admin/uploads/<sha1>?upload=<id>` | Cancelar la subida |
 | PUT | `/v1/admin/draft` | Guardar el borrador |
 | POST | `/v1/admin/publish` | Publicar |
 | POST | `/v1/admin/rollback` | `{"revision": n}` |
