@@ -66,6 +66,8 @@ object AmethystBridge {
         account: Account,
         versionId: String,
         ramMb: Int,
+        renderer: Renderer,
+        jvmArgs: String,
         log: (String) -> Unit,
         javaProgress: (Int) -> Unit = {},
     ) {
@@ -84,7 +86,7 @@ object AmethystBridge {
         PojavProfile.setCurrentProfile(activity, mc.username)
         Tools.switchDemo(false)
 
-        // 2. Perfil de lanzamiento (launcher_profiles.json) + RAM asignada
+        // 2. Perfil de lanzamiento (launcher_profiles.json) + RAM, renderer y argumentos Java
         LauncherProfiles.load()
         val profiles = LauncherProfiles.mainProfileJson.profiles
         // Limpia copias re-indexadas de versiones anteriores del launcher
@@ -93,6 +95,10 @@ object AmethystBridge {
         profile.name = PROFILE_NAME
         profile.lastVersionId = versionId
         profile.controlFile = installControls(activity)
+        profile.pojavRendererName = renderer.amethystName
+        profile.useANGLE = renderer.angle
+        // Amethyst ignora -Xms/-Xmx: la memoria sale del control de Memória
+        profile.javaArgs = jvmArgs.ifBlank { null }
         profiles[PROFILE_KEY] = profile
         LauncherProfiles.write()
         LauncherPreferences.DEFAULT_PREF.edit()
@@ -100,7 +106,8 @@ object AmethystBridge {
             .putInt("allocation", ramMb)
             .commit()
         LauncherPreferences.loadPreferences(activity)
-        log("Perfil Amethyst pronto (${mc.username}, ${ramMb} MB)")
+        log("Perfil Amethyst pronto (${mc.username}, ${ramMb} MB, ${renderer.label})")
+        if (jvmArgs.isNotBlank()) log("Argumentos Java: $jvmArgs")
 
         // 3. JRE (Java 8/17/21/25 según la versión)
         val info = Tools.getVersionInfo(versionId)

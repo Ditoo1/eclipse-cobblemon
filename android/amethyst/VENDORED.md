@@ -11,8 +11,8 @@
 ## Qué aporta a EclipseCobblemon
 
 - `src/main/jni/`: `libpojavexec`. Contiene el arranque de la JVM en el proceso (`jre_launcher.c`), el puente EGL/GL (`egl_bridge.c`, `ctxbridges/`) y la entrada táctil, de ratón y de teclado para GLFW (`input_bridge_v3.c`).
-- `libs/*.aar`: renderers y librerías nativas precompiladas, como MobileGlues, ANGLE, Kopper-Zink, los natives de LWJGL 3.3.3/3.4.1, OpenAL y SDL.
-- `assets/components/`: LWJGL para Android, caciocavallo (AWT), parches de log4j y forge_installer.
+- `libs/*.aar`: renderers y librerías nativas precompiladas, como MobileGlues, ANGLE, Kopper-Zink, los natives de LWJGL 3.3.3, OpenAL y SDL. La 3.4.1 se quitó: Minecraft 1.21.1 no la usa.
+- `assets/components/`: LWJGL 3.3.3 para Android, caciocavallo (AWT), parches de log4j y forge_installer.
 - `net.kdt.pojavlaunch.multirt` + `NewJREUtil`: instalación del JRE de Android (8/17/21/25).
 - `net.kdt.pojavlaunch.MainActivity`: la Activity del juego, con controles táctiles, en el proceso `:game`.
 

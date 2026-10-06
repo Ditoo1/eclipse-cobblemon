@@ -27,6 +27,13 @@ android {
         // URL del manifiesto del pack (Worker): gradle.properties o -PpackUrl=. Vacía = sin pack (vanilla).
         val packUrl = (findProperty("packUrl") as String?).orEmpty().trim()
         buildConfigField("String", "PACK_URL", "\"$packUrl\"")
+        // Solo ARM: x86/x86_64 son emuladores y algunas tablets Intel, y ocupaban ~50 MB del APK.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+    }
+    androidResources {
+        // Las librerías nativas de LWJGL también van como assets (lwjgl-*-natives/<abi>): fuera las x86.
+        // Patrón por defecto de aapt + las carpetas x86.
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~:!<dir>x86:!<dir>x86_64"
     }
 
     signingConfigs {

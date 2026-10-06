@@ -27,9 +27,18 @@ static NSString *const ECServerName = @"Eclipse Cobblemon";
 /// Dirección del servidor; nil mientras no esté abierto.
 static NSString *const ECServerAddress = nil;
 static NSString *const ECProfileName = @"Eclipse Cobblemon";
-static NSString *const ECRendererLabel = @"Metal (ANGLE)";
 static NSString *const ECNotificationLog = @"ECLogChanged";
 static void *ECProgressContext = &ECProgressContext;
+
+/// Renderers que puede elegir el jugador: los que trae la app y sirven para 1.21.1 (gl4es no llega a OpenGL 3.2).
+static NSArray<NSDictionary<NSString *, NSString *> *> *ECRenderers(void) {
+    return @[
+        @{@"key": @"auto", @"label": @"Automático", @"detail": @"A app escolhe o mais adequado."},
+        @{@"key": @RENDERER_NAME_MOBILEGLUES, @"label": @"MobileGlues", @"detail": @"Normalmente o mais rápido."},
+        @{@"key": @RENDERER_NAME_MTL_ANGLE, @"label": @"Metal (ANGLE)", @"detail": @"Alternativa se houver gráficos estranhos."},
+        @{@"key": @RENDERER_NAME_VK_ZINK, @"label": @"Zink (Vulkan)", @"detail": @"Mais compatível, mas normalmente mais lento."},
+    ];
+}
 
 /// URL del manifiesto del pack (clave ECPackURL de Info.plist). nil = sin pack: Minecraft vanilla.
 static NSURL *ECPackURL(void) {
@@ -198,6 +207,10 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
 @property(nonatomic, readonly) BOOL isPremium;
 @property(nonatomic, readonly) NSString *username;
 @property(nonatomic) int ramMb;
+/// Renderer elegido (clave de Amethyst) y argumentos Java extra; se guardan en NSUserDefaults.
+@property(nonatomic, readonly) NSString *rendererKey, *rendererLabel;
+@property(nonatomic, copy) NSString *jvmArgs;
+@property(nonatomic, readonly) UIViewController *topController;
 
 // Skin
 @property(nonatomic) UIImage *skinTexture;
@@ -484,9 +497,14 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     BOOL changed = ![mine[@"lastVersionId"] isEqualToString:versionId] || ![profiles.selectedProfileName isEqualToString:ECProfileName];
     mine[@"name"] = ECProfileName;
     mine[@"lastVersionId"] = versionId;
+    changed = changed || ![mine[@"renderer"] isEqualToString:self.rendererKey];
+    mine[@"renderer"] = self.rendererKey;
+    // JavaLauncher ignora -Xms/-Xmx: la memoria sale del control de Memória
+    NSString *userArgs = self.jvmArgs;
     // Simulador: sin depurador, las páginas JIT espejo se consideran inválidas; probar sin espejo.
     if (getenv("SIMULATOR_DEVICE_NAME")) {
         NSString *args = getenv("EC_JVM_ARGS") ? @(getenv("EC_JVM_ARGS")) : @"-XX:-MirrorMappedCodeCache";
+        if (userArgs.length) args = [args stringByAppendingFormat:@" %@", userArgs];
         // JNA firmado para el simulador (lo incluye el workflow sim-game)
         NSString *jna = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"jna"];
         if ([NSFileManager.defaultManager fileExistsAtPath:jna]) {
@@ -494,6 +512,13 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
         }
         changed = changed || ![mine[@"javaArgs"] isEqualToString:args];
         mine[@"javaArgs"] = args;
+    } else if (userArgs.length) {
+        changed = changed || ![mine[@"javaArgs"] isEqualToString:userArgs];
+        mine[@"javaArgs"] = userArgs;
+    } else if (mine[@"javaArgs"]) {
+        // Sin argumentos propios: los de Amethyst por defecto
+        [mine removeObjectForKey:@"javaArgs"];
+        changed = YES;
     }
     all[ECProfileName] = mine;
     profiles.profileDict[@"profiles"] = all;
@@ -520,6 +545,31 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
         setPrefObject(@"control.default_ctrl", @"Controles_Eclipse.json");
         [d setBool:YES forKey:@"eclipse.controls_default"];
     }
+}
+
+- (NSString *)rendererKey {
+    NSString *key = [NSUserDefaults.standardUserDefaults stringForKey:@"eclipse.renderer"];
+    for (NSDictionary *r in ECRenderers()) {
+        if ([r[@"key"] isEqualToString:key]) return key;
+    }
+    return @"auto";
+}
+
+- (NSString *)rendererLabel {
+    for (NSDictionary *r in ECRenderers()) {
+        if ([r[@"key"] isEqualToString:self.rendererKey]) return r[@"label"];
+    }
+    return @"Automático";
+}
+
+- (NSString *)jvmArgs {
+    return [NSUserDefaults.standardUserDefaults stringForKey:@"eclipse.jvm_args"] ?: @"";
+}
+
+- (void)setJvmArgs:(NSString *)jvmArgs {
+    NSArray *parts = [jvmArgs componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    parts = [parts filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"length > 0"]];
+    [NSUserDefaults.standardUserDefaults setObject:[parts componentsJoinedByString:@" "] forKey:@"eclipse.jvm_args"];
 }
 
 - (int)ramMb {
@@ -579,6 +629,8 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     setPrefBool(@"java.auto_ram", NO);
     setPrefInt(@"java.allocated_memory", self.ramMb);
     ECLog(@"Memória Java: %d MB", self.ramMb);
+    ECLog(@"Renderer: %@", self.rendererLabel);
+    if (self.jvmArgs.length) ECLog(@"Argumentos Java: %@", self.jvmArgs);
 
     if (self.isPremium) {
         ECLog(@"A verificar a sessão da Microsoft…");
@@ -1632,7 +1684,7 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     }
 
     UILabel *title = ECLabel(@"A entrar no mundo", 20, 600, ECIvory);
-    UILabel *sub = ECLabel([NSString stringWithFormat:@"Minecraft %@ · %@", ECVersion, ECRendererLabel], 13, 400, ECMuted);
+    UILabel *sub = ECLabel([NSString stringWithFormat:@"Minecraft %@ · %@", ECVersion, self.rendererLabel], 13, 400, ECMuted);
     UIView *bar = [UIView new];
     bar.backgroundColor = [ECIvory colorWithAlphaComponent:.08];
     bar.clipsToBounds = YES;
@@ -1912,7 +1964,7 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     UIStackView *tiles = ECRow(@[
         [self tileWithSymbol:@"star.fill" label:@"Versão" value:ECVersion],
         [self tileWithSymbol:@"memorychip" label:@"Memória" value:[NSString stringWithFormat:@"%d MB", self.ramMb]],
-        [self tileWithSymbol:@"wrench.fill" label:@"Renderer" value:@"Metal"],
+        [self tileWithSymbol:@"wrench.fill" label:@"Renderer" value:self.rendererLabel],
     ], 10);
     [stack addArrangedSubview:tiles];
     [stack addArrangedSubview:ECSpacer(18)];
@@ -2110,13 +2162,80 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
 }
 
 - (UIView *)settingRow:(NSString *)label value:(NSString *)value {
+    return [self settingRow:label value:value action:nil];
+}
+
+/// Fila de ajustes; con action, se puede tocar y muestra una flecha.
+- (UIView *)settingRow:(NSString *)label value:(NSString *)value action:(SEL)action {
     UILabel *l = ECLabel(label, 15, 400, ECIvory);
     UILabel *v = ECLabel(value, 14, 400, ECMuted);
     v.textAlignment = NSTextAlignmentRight;
     UIStackView *row = [[UIStackView alloc] initWithArrangedSubviews:@[l, v]];
+    row.spacing = 6;
     row.layoutMargins = UIEdgeInsetsMake(16, 0, 16, 0);
     row.layoutMarginsRelativeArrangement = YES;
+    if (action) {
+        UIImageView *chevron = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"chevron.right"
+            withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:12 weight:UIImageSymbolWeightSemibold]]];
+        chevron.tintColor = ECMuted;
+        chevron.contentMode = UIViewContentModeCenter;
+        [chevron setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
+        [row addArrangedSubview:chevron];
+        [row addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:action]];
+    }
     return row;
+}
+
+- (UIViewController *)topController {
+    UIViewController *top = self;
+    while (top.presentedViewController) top = top.presentedViewController;
+    return top;
+}
+
+- (void)pickRenderer:(UITapGestureRecognizer *)tap {
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"Renderer"
+        message:@"Se o jogo fechar ou tiver gráficos estranhos, experimente outro."
+        preferredStyle:UIAlertControllerStyleActionSheet];
+    NSString *current = self.rendererKey;
+    for (NSDictionary *r in ECRenderers()) {
+        NSString *title = [NSString stringWithFormat:@"%@%@ — %@", [r[@"key"] isEqualToString:current] ? @"✓ " : @"", r[@"label"], r[@"detail"]];
+        [sheet addAction:[UIAlertAction actionWithTitle:title style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+            [NSUserDefaults.standardUserDefaults setObject:r[@"key"] forKey:@"eclipse.renderer"];
+            [self reloadSheet];
+        }]];
+    }
+    [sheet addAction:[UIAlertAction actionWithTitle:@"Cancelar" style:UIAlertActionStyleCancel handler:nil]];
+    // iPad: la hoja sale como popover junto a la fila
+    sheet.popoverPresentationController.sourceView = tap.view;
+    sheet.popoverPresentationController.sourceRect = tap.view.bounds;
+    [self.topController presentViewController:sheet animated:YES completion:nil];
+}
+
+- (void)editJvmArgs {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Argumentos Java"
+        message:@"Só para utilizadores avançados: um argumento errado impede o jogo de abrir. A memória ajusta-se em Memória (-Xmx e -Xms são ignorados). Deixe vazio para usar os predefinidos."
+        preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *field) {
+        field.text = self.jvmArgs;
+        field.placeholder = @"-XX:+UseG1GC";
+        field.font = [UIFont monospacedSystemFontOfSize:13 weight:UIFontWeightRegular];
+        field.autocapitalizationType = UITextAutocapitalizationTypeNone;
+        field.autocorrectionType = UITextAutocorrectionTypeNo;
+        field.spellCheckingType = UITextSpellCheckingTypeNo;
+        field.clearButtonMode = UITextFieldViewModeWhileEditing;
+    }];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Cancelar" style:UIAlertActionStyleCancel handler:nil]];
+    if (self.jvmArgs.length) {
+        [alert addAction:[UIAlertAction actionWithTitle:@"Repor" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
+            self.jvmArgs = @"";
+            [self reloadSheet];
+        }]];
+    }
+    [alert addAction:[UIAlertAction actionWithTitle:@"Guardar" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        self.jvmArgs = alert.textFields.firstObject.text ?: @"";
+        [self reloadSheet];
+    }]];
+    [self.topController presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)buildSettingsInto:(UIStackView *)stack {
@@ -2158,7 +2277,9 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     }
     [stack addArrangedSubview:mem];
     [stack addArrangedSubview:ECDivider()];
-    [stack addArrangedSubview:[self settingRow:@"Renderer" value:ECRendererLabel]];
+    [stack addArrangedSubview:[self settingRow:@"Renderer" value:self.rendererLabel action:self.busy ? nil : @selector(pickRenderer:)]];
+    [stack addArrangedSubview:ECDivider()];
+    [stack addArrangedSubview:[self settingRow:@"Argumentos Java" value:self.jvmArgs.length ? @"Personalizados" : @"Predefinidos" action:self.busy ? nil : @selector(editJvmArgs)]];
     [stack addArrangedSubview:ECSpacer(16)];
 
     ECButton *verify = [ECButton buttonWithStyle:ECButtonStyleOutline title:@"Verificar ficheiros" symbol:@"arrow.clockwise" action:^{

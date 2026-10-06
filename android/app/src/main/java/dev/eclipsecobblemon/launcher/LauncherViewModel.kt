@@ -24,6 +24,7 @@ import dev.eclipsecobblemon.launcher.game.PackSync
 import dev.eclipsecobblemon.launcher.game.VersionEntry
 import dev.eclipsecobblemon.launcher.game.VersionManager
 import dev.eclipsecobblemon.launcher.launch.AmethystBridge
+import dev.eclipsecobblemon.launcher.launch.Renderer
 import dev.eclipsecobblemon.launcher.nativecore.NativeCore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -47,6 +48,25 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     /** Versión fija del servidor por ahora. */
     val selectedVersion = DEFAULT_VERSION
     var ramMb by mutableStateOf(0)
+
+    private val settings = app.getSharedPreferences("launcher_settings", android.content.Context.MODE_PRIVATE)
+    /** Renderers que funcionan en este equipo (los de Vulkan solo si lo tiene). */
+    val renderers = Renderer.available(app)
+    var renderer by mutableStateOf(Renderer.fromId(settings.getString("renderer", null)).takeIf { it in renderers } ?: Renderer.AUTO)
+        private set
+    /** Argumentos extra de la JVM; vacío = los de Amethyst. */
+    var jvmArgs by mutableStateOf(settings.getString("jvm_args", null).orEmpty())
+        private set
+
+    fun selectRenderer(r: Renderer) {
+        renderer = r
+        settings.edit().putString("renderer", r.id).apply()
+    }
+
+    fun saveJvmArgs(value: String) {
+        jvmArgs = value.trim().replace(Regex("\\s+"), " ")
+        settings.edit().putString("jvm_args", jvmArgs).apply()
+    }
     var busy by mutableStateOf(false)
         private set
     var progress by mutableStateOf<Float?>(null)
@@ -303,7 +323,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
         stage = Stage.JAVA
         withContext(Dispatchers.IO) {
-            AmethystBridge.prepare(activity, acc, versionId, ramMb, ::log) { pct ->
+            AmethystBridge.prepare(activity, acc, versionId, ramMb, renderer, jvmArgs, ::log) { pct ->
                 viewModelScope.launch(Dispatchers.Main) { javaProgress = pct / 100f }
             }
         }

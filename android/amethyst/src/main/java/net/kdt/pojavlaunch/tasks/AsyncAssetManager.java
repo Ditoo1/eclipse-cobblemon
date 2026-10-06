@@ -99,7 +99,6 @@ public class AsyncAssetManager {
                 // we repack them to a single file here
                 unpackLwjglNatives(ctx);
                 unpackComponent(ctx, "lwjgl3/3.3.3", false);
-                unpackComponent(ctx, "lwjgl3/3.4.1", false);
                 unpackComponent(ctx, "security", true);
                 unpackComponent(ctx, "arc_dns_injector", true);
                 unpackComponent(ctx, "MioLibPatcher", true);
@@ -117,7 +116,8 @@ public class AsyncAssetManager {
         String rootDir = Tools.DIR_DATA;
         String sArch = archAsStringAndroid(getDeviceArchitecture());
 
-        String[] lwjglVersions = {"3.3.3", "3.4.1"};
+        // Minecraft 1.21.1 usa LWJGL 3.3.3; la 3.4.1 (versiones nuevas) no va en el APK.
+        String[] lwjglVersions = {"3.3.3"};
         for (String lwjglVer : lwjglVersions) {
             File versionFile = new File(Tools.DIR_GAME_HOME + String.format("/lwjgl3/%s/version", lwjglVer));
             InputStream is = am.open("components/lwjgl3/" + lwjglVer + "/version");

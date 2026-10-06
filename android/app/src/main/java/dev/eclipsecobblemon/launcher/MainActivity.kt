@@ -182,9 +182,6 @@ private enum class Sheet { PROFILE, SETTINGS }
 private const val SERVER_NAME = "Eclipse Cobblemon"
 private val SERVER_ADDRESS: String? = null
 
-/** Amethyst usa MobileGlues por defecto y cae al primer renderer compatible si el equipo no lo soporta. */
-private const val RENDERER = "MobileGlues"
-
 class MainActivity : ComponentActivity() {
     private val vm: LauncherViewModel by viewModels()
 
@@ -257,7 +254,7 @@ fun LauncherScreen(vm: LauncherViewModel) {
     }
 
     AnimatedVisibility(vm.stage == Stage.LAUNCHING, enter = fadeIn(tween(500)), exit = fadeOut(tween(400))) {
-        LaunchingScreen()
+        LaunchingScreen(vm.renderer.label)
     }
 
     sheet?.let { current ->
@@ -535,7 +532,7 @@ private fun androidx.compose.foundation.layout.RowScope.NavItem(icon: ImageVecto
 // ---------- Lanzando ----------
 
 @Composable
-private fun LaunchingScreen() {
+private fun LaunchingScreen(renderer: String) {
     val stars = remember { List(26) { floatArrayOf(Random.nextFloat(), Random.nextFloat(), Random.nextFloat() * 6.28f, 1f + Random.nextFloat()) } }
     val inf = rememberInfiniteTransition(label = "launch")
     val t by inf.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(4000, easing = LinearEasing)), label = "t")
@@ -555,7 +552,7 @@ private fun LaunchingScreen() {
             Spacer(Modifier.height(40.dp))
             Text("A entrar no mundo", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Ivory)
             Spacer(Modifier.height(8.dp))
-            Text("Minecraft ${LauncherViewModel.DEFAULT_VERSION} · $RENDERER", fontSize = 13.sp, color = Muted)
+            Text("Minecraft ${LauncherViewModel.DEFAULT_VERSION} · $renderer", fontSize = 13.sp, color = Muted)
             Spacer(Modifier.height(20.dp))
             Box(Modifier.width(160.dp).height(2.dp).background(Ivory.copy(alpha = .08f))) {
                 Canvas(Modifier.fillMaxSize()) {
@@ -729,7 +726,7 @@ private fun ColumnScope.ProfileSheet(vm: LauncherViewModel, onSettings: () -> Un
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Tile(Icons.Filled.Star, "Versão", vm.selectedVersion, Modifier.weight(1f), onSettings)
         Tile(Icons.Filled.Settings, "Memória", "${vm.ramMb} MB", Modifier.weight(1f), onSettings)
-        Tile(Icons.Filled.Build, "Renderer", RENDERER, Modifier.weight(1f), onSettings)
+        Tile(Icons.Filled.Build, "Renderer", vm.renderer.label, Modifier.weight(1f), onSettings)
     }
     Spacer(Modifier.height(18.dp))
     OutlineButton("Terminar sessão", Icons.AutoMirrored.Filled.ExitToApp, Modifier.fillMaxWidth(), enabled = !vm.busy, onClick = vm::logout)
@@ -964,6 +961,8 @@ private fun Tile(icon: ImageVector, label: String, value: String, modifier: Modi
 private fun SettingsSheet(vm: LauncherViewModel) {
     var showLog by remember { mutableStateOf(false) }
     var confirmWipe by remember { mutableStateOf(false) }
+    var pickRenderer by remember { mutableStateOf(false) }
+    var editArgs by remember { mutableStateOf(false) }
 
     SheetTitle("Definições")
     Spacer(Modifier.height(8.dp))
@@ -985,7 +984,13 @@ private fun SettingsSheet(vm: LauncherViewModel) {
         Text("Recomendado para este dispositivo: ${vm.recommendedRamMb} MB", fontSize = 12.sp, color = Muted)
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Hair))
-    SettingRow("Renderer", RENDERER, divider = false)
+    SettingRow("Renderer", vm.renderer.label, chevron = true, enabled = !vm.busy) { pickRenderer = true }
+    SettingRow(
+        "Argumentos Java", if (vm.jvmArgs.isBlank()) "Predefinidos" else "Personalizados",
+        chevron = true, divider = false, enabled = !vm.busy,
+    ) { editArgs = true }
+    if (pickRenderer) RendererDialog(vm) { pickRenderer = false }
+    if (editArgs) JvmArgsDialog(vm) { editArgs = false }
 
     Spacer(Modifier.height(16.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1028,6 +1033,78 @@ private fun SettingsSheet(vm: LauncherViewModel) {
     }
     Spacer(Modifier.height(18.dp))
     Text("EclipseCobblemon ${BuildConfig.VERSION_NAME} · Runtime Amethyst 1.1.7", fontSize = 11.5.sp, color = Dim)
+}
+
+@Composable
+private fun RendererDialog(vm: LauncherViewModel, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = SheetBg,
+        title = { Text("Renderer", color = Ivory, fontWeight = FontWeight.SemiBold) },
+        text = {
+            Column {
+                vm.renderers.forEach { r ->
+                    val selected = r == vm.renderer
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                            .clickable { vm.selectRenderer(r); onDismiss() }
+                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(r.label, fontSize = 15.sp, color = if (selected) Gold else Ivory, fontWeight = FontWeight.SemiBold)
+                            Text(r.description, fontSize = 12.5.sp, color = Muted, lineHeight = 17.sp)
+                        }
+                        if (selected) Icon(Icons.Filled.Check, null, tint = Gold, modifier = Modifier.size(20.dp))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Se o jogo fechar ou tiver gráficos estranhos, experimente outro.", fontSize = 12.sp, color = Dim, lineHeight = 17.sp)
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Fechar", color = Ivory) } },
+    )
+}
+
+@Composable
+private fun JvmArgsDialog(vm: LauncherViewModel, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf(vm.jvmArgs) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = SheetBg,
+        title = { Text("Argumentos Java", color = Ivory, fontWeight = FontWeight.SemiBold) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    placeholder = { Text("-XX:+UseG1GC", color = Dim) },
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Gold.copy(alpha = .6f), unfocusedBorderColor = Hair,
+                        cursorColor = Gold, focusedTextColor = Ivory, unfocusedTextColor = Ivory,
+                    ),
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Só para utilizadores avançados: um argumento errado impede o jogo de abrir. " +
+                        "A memória ajusta-se em Memória (-Xmx e -Xms são ignorados). Deixe vazio para usar os predefinidos.",
+                    fontSize = 12.sp, color = Muted, lineHeight = 17.sp,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { vm.saveJvmArgs(text); onDismiss() }) { Text("Guardar", color = Gold, fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = {
+            Row {
+                if (vm.jvmArgs.isNotBlank()) TextButton(onClick = { vm.saveJvmArgs(""); onDismiss() }) { Text("Repor", color = Danger) }
+                TextButton(onClick = onDismiss) { Text("Cancelar", color = Ivory) }
+            }
+        },
+    )
 }
 
 @Composable

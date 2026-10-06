@@ -126,6 +126,11 @@ NSString* getSelectedJavaHome(NSString* defaultJRETag, int minVersion) {
 
     if ([NSFileManager.defaultManager fileExistsAtPath:selectedDir]) {
         return selectedDir;
+    }
+    // La app solo trae Java 21; ajustes de versiones anteriores pueden apuntar a Java 8/17/25, ya no incluidos.
+    NSString *bundled = [NSString stringWithFormat:@"%@/java_runtimes/java-21-openjdk", NSBundle.mainBundle.bundlePath];
+    if (minVersion <= 21 && [NSFileManager.defaultManager fileExistsAtPath:bundled]) {
+        return bundled;
     } else {
         NSLog(@"Error: selected runtime for %@ does not exist: %@", defaultJRETag, selectedDir);
         return nil;
