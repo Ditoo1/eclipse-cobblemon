@@ -24,6 +24,7 @@ import dev.eclipsecobblemon.launcher.game.PackSync
 import dev.eclipsecobblemon.launcher.game.VersionEntry
 import dev.eclipsecobblemon.launcher.game.VersionManager
 import dev.eclipsecobblemon.launcher.launch.AmethystBridge
+import dev.eclipsecobblemon.launcher.launch.LogBundle
 import dev.eclipsecobblemon.launcher.launch.Renderer
 import dev.eclipsecobblemon.launcher.nativecore.NativeCore
 import kotlinx.coroutines.Dispatchers
@@ -111,6 +112,18 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             logs += line
             if (logs.size > 300) logs.removeRange(0, logs.size - 300)
         }
+    }
+
+    /** Comprime los registos y abre el menú de partilhar del sistema. */
+    fun shareLogs(activity: Activity) = viewModelScope.launch {
+        log("A preparar os registos para partilhar")
+        val details = listOf(
+            "Memória Java: $ramMb MB · Renderer: ${renderer.label}",
+            "Argumentos Java: ${jvmArgs.ifBlank { "predefinidos" }}",
+        )
+        runCatching { withContext(Dispatchers.IO) { LogBundle.create(getApplication(), logs.toList(), details) } }
+            .onSuccess { net.kdt.pojavlaunch.Tools.openPath(activity, it, true) }
+            .onFailure { log("Não foi possível preparar os registos: ${it.message}") }
     }
 
     fun loadVersions() = viewModelScope.launch {

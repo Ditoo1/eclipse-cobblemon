@@ -603,6 +603,76 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
         message:[NSString stringWithFormat:@"Este iPhone tem %.0f GB de memória. O Minecraft com Cobblemon pode fechar sozinho ou ficar lento. Recomendado: iPhone 12 Pro, 13 Pro, 14 ou superior · Mínimo: iPhone XS.", ceil(ECDeviceRAMGB())]];
 }
 
+#pragma mark - Partilhar registos
+
+/// Junta el registo del launcher, la salida de Java (latestlog.txt), logs/latest.log y los últimos
+/// crash reports en un .zip y abre el menú de partilhar.
+- (void)shareLogs {
+    ECLog(@"A preparar os registos para partilhar");
+    NSString *version = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+    NSMutableArray *lines = [NSMutableArray arrayWithObjects:
+        [NSString stringWithFormat:@"Eclipse Cobblemon %@ (iOS)", version],
+        [NSString stringWithFormat:@"Dispositivo: %@ · iOS %@ · %.1f GB", ECDeviceModel(), UIDevice.currentDevice.systemVersion, ECDeviceRAMGB()],
+        [NSString stringWithFormat:@"Memória Java: %d MB · Renderer: %@", self.ramMb, self.rendererLabel],
+        [NSString stringWithFormat:@"Argumentos Java: %@", self.jvmArgs.length ? self.jvmArgs : @"predefinidos"],
+        @"", nil];
+    [lines addObjectsFromArray:ECLogLines()];
+    NSString *home = @(getenv("POJAV_HOME"));
+    NSString *game = @(getenv("POJAV_GAME_DIR"));
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSFileManager *fm = NSFileManager.defaultManager;
+        NSString *dir = [NSTemporaryDirectory() stringByAppendingPathComponent:@"EclipseCobblemon-registos"];
+        [fm removeItemAtPath:dir error:nil];
+        [fm createDirectoryAtPath:[dir stringByAppendingPathComponent:@"crash-reports"] withIntermediateDirectories:YES attributes:nil error:nil];
+        [[lines componentsJoinedByString:@"\n"] writeToFile:[dir stringByAppendingPathComponent:@"launcher.txt"] atomically:YES encoding:NSUTF8StringEncoding error:nil];
+        NSDictionary *files = @{
+            @"latestlog.txt": [home stringByAppendingPathComponent:@"latestlog.txt"],
+            @"latestlog.old.txt": [home stringByAppendingPathComponent:@"latestlog.old.txt"],
+            @"latest.log": [game stringByAppendingPathComponent:@"logs/latest.log"],
+        };
+        for (NSString *name in files) {
+            [fm copyItemAtPath:files[name] toPath:[dir stringByAppendingPathComponent:name] error:nil];
+        }
+        // Los 3 crash reports más recientes
+        NSURL *crashDir = [NSURL fileURLWithPath:[game stringByAppendingPathComponent:@"crash-reports"]];
+        NSArray<NSURL *> *crashes = [fm contentsOfDirectoryAtURL:crashDir includingPropertiesForKeys:@[NSURLContentModificationDateKey] options:0 error:nil];
+        crashes = [crashes sortedArrayUsingComparator:^NSComparisonResult(NSURL *a, NSURL *b) {
+            NSDate *da, *db;
+            [a getResourceValue:&da forKey:NSURLContentModificationDateKey error:nil];
+            [b getResourceValue:&db forKey:NSURLContentModificationDateKey error:nil];
+            return [db compare:da];
+        }];
+        for (NSURL *crash in [crashes subarrayWithRange:NSMakeRange(0, MIN(crashes.count, 3))]) {
+            [fm copyItemAtURL:crash toURL:[NSURL fileURLWithPath:[dir stringByAppendingPathComponent:[@"crash-reports" stringByAppendingPathComponent:crash.lastPathComponent]]] error:nil];
+        }
+
+        // NSFileCoordinator comprime la carpeta en un .zip (ForUploading)
+        NSDateFormatter *fmt = [NSDateFormatter new];
+        fmt.dateFormat = @"yyyyMMdd-HHmm";
+        NSString *zipName = [NSString stringWithFormat:@"EclipseCobblemon-registos-%@.zip", [fmt stringFromDate:NSDate.date]];
+        NSURL *dest = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:zipName]];
+        __block BOOL ok = NO;
+        NSError *error;
+        [[NSFileCoordinator new] coordinateReadingItemAtURL:[NSURL fileURLWithPath:dir] options:NSFileCoordinatorReadingForUploading error:&error byAccessor:^(NSURL *zipURL) {
+            [fm removeItemAtURL:dest error:nil];
+            ok = [fm copyItemAtURL:zipURL toURL:dest error:nil];
+        }];
+        [fm removeItemAtPath:dir error:nil];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (!ok) {
+                ECLog(@"Não foi possível preparar os registos: %@", error.localizedDescription ?: @"erro desconhecido");
+                return;
+            }
+            UIActivityViewController *share = [[UIActivityViewController alloc] initWithActivityItems:@[dest] applicationActivities:nil];
+            UIViewController *top = self.topController;
+            share.popoverPresentationController.sourceView = top.view;
+            share.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMidX(top.view.bounds), CGRectGetMidY(top.view.bounds), 1, 1);
+            share.popoverPresentationController.permittedArrowDirections = 0;
+            [top presentViewController:share animated:YES completion:nil];
+        });
+    });
+}
+
 #pragma mark - Enlaces
 
 - (void)openSite {
@@ -2356,6 +2426,13 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
         [advanced addTarget:self action:@selector(openAdvanced) forControlEvents:UIControlEventTouchUpInside];
         [stack addArrangedSubview:advanced];
     }
+    [stack addArrangedSubview:ECSpacer(10)];
+
+    // Registos del launcher, de Java y de Minecraft en un .zip, para mandarlos por Discord o WhatsApp
+    ECButton *shareButton = [ECButton buttonWithStyle:ECButtonStyleOutline title:@"Partilhar registos" symbol:@"square.and.arrow.up" action:^{
+        [weakSelf shareLogs];
+    }];
+    [stack addArrangedSubview:shareButton];
     [stack addArrangedSubview:ECSpacer(10)];
 
     ECButton *wipe = [ECButton buttonWithStyle:ECButtonStyleDanger title:@"Apagar dados do Minecraft" symbol:@"trash.fill" action:^{

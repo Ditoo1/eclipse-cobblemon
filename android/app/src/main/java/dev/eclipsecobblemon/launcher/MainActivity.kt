@@ -74,6 +74,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -1023,6 +1024,10 @@ private fun SettingsSheet(vm: LauncherViewModel) {
         Spacer(Modifier.height(12.dp))
         LogConsole(vm, Modifier.fillMaxWidth().height(240.dp))
     }
+    Spacer(Modifier.height(10.dp))
+    // Registos del launcher, de Java y de Minecraft en un .zip, para mandarlos por Discord o WhatsApp
+    val activity = LocalContext.current as Activity
+    OutlineButton("Partilhar registos", Icons.Filled.Share, Modifier.fillMaxWidth()) { vm.shareLogs(activity) }
     Spacer(Modifier.height(10.dp))
     OutlineButton(
         "Apagar dados do Minecraft", Icons.Filled.Delete, Modifier.fillMaxWidth(),
