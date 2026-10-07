@@ -20,6 +20,7 @@ El archivo `.dSYM.zip` es solo para depurar cierres de la app de iPhone; los jug
 - **Un solo botón para jugar**: descarga Minecraft 1.21.1 y Java la primera vez y abre el juego, mostrando el progreso.
 - **Perfil** con la cabeza de tu skin; con cuenta Microsoft puedes cambiar la skin (clásica o fina) y la capa desde la app.
 - **Ajustes**: memoria para Java con valor recomendado, renderer a elegir (si el juego se cierra o se ve raro, prueba otro), argumentos Java para usuarios avanzados, verificar archivos, ver el registro y borrar los datos de Minecraft.
+- Botones al **sitio web** y al **Discord** de la comunidad en la pantalla de inicio.
 - **Controles táctiles** de Eclipse ya instalados.
 - En iPhone, la app detecta la memoria del dispositivo y elige la memoria de Java y la distancia de renderizado.
 
@@ -70,6 +71,7 @@ The `.dSYM.zip` file is only for debugging iPhone crashes; players don't need it
 - **One button to play**: downloads Minecraft 1.21.1 and Java the first time and launches the game, showing progress.
 - **Profile** with your skin's head; with a Microsoft account you can change your skin (classic or slim) and cape from the app.
 - **Settings**: Java memory with a recommended value, a choice of renderer (if the game crashes or looks wrong, try another), Java arguments for advanced users, verify files, view the log and delete Minecraft data.
+- Buttons to the community's **website** and **Discord** on the home screen.
 - Eclipse **touch controls** preinstalled.
 - On iPhone, the app detects the device's memory and picks the Java memory and render distance.
 

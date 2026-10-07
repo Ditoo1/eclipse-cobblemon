@@ -27,6 +27,9 @@ static NSString *const ECServerName = @"Eclipse Cobblemon";
 /// Dirección del servidor; nil mientras no esté abierto.
 static NSString *const ECServerAddress = nil;
 static NSString *const ECProfileName = @"Eclipse Cobblemon";
+/// Enlaces de la comunidad (botones de la tarjeta del castillo).
+static NSString *const ECSiteURL = @"https://eclipse-cobblemon0.netlify.app/";
+static NSString *const ECDiscordURL = @"https://discord.gg/UCcXN3xqmn";
 static NSString *const ECNotificationLog = @"ECLogChanged";
 static void *ECProgressContext = &ECProgressContext;
 
@@ -598,6 +601,16 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     [d setBool:YES forKey:@"eclipse.low_ram_warned"];
     [self alert:@"Dispositivo não recomendado"
         message:[NSString stringWithFormat:@"Este iPhone tem %.0f GB de memória. O Minecraft com Cobblemon pode fechar sozinho ou ficar lento. Recomendado: iPhone 12 Pro, 13 Pro, 14 ou superior · Mínimo: iPhone XS.", ceil(ECDeviceRAMGB())]];
+}
+
+#pragma mark - Enlaces
+
+- (void)openSite {
+    [UIApplication.sharedApplication openURL:[NSURL URLWithString:ECSiteURL] options:@{} completionHandler:nil];
+}
+
+- (void)openDiscord {
+    [UIApplication.sharedApplication openURL:[NSURL URLWithString:ECDiscordURL] options:@{} completionHandler:nil];
 }
 
 #pragma mark - Jogar
@@ -1482,6 +1495,27 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
     chipRow.translatesAutoresizingMaskIntoConstraints = NO;
     [chip addSubview:chipRow];
 
+    // Enlaces: Site y Discord, en las esquinas inferiores a los lados del botón de jugar
+    UIButton *(^linkPill)(NSString *, NSString *, SEL) = ^UIButton *(NSString *title, NSString *symbol, SEL sel) {
+        UIButton *b = [UIButton buttonWithType:UIButtonTypeSystem];
+        b.backgroundColor = [ECNight colorWithAlphaComponent:.62];
+        b.layer.cornerRadius = 17;
+        b.layer.borderWidth = 1;
+        b.layer.borderColor = ECHair.CGColor;
+        [b setImage:ECSymbol(symbol, 13, UIFontWeightSemibold) forState:UIControlStateNormal];
+        [b setAttributedTitle:[[NSAttributedString alloc] initWithString:title attributes:@{NSFontAttributeName: ECFont(12.5, 600), NSForegroundColorAttributeName: ECIvory}] forState:UIControlStateNormal];
+        b.tintColor = ECGold;
+        b.contentEdgeInsets = UIEdgeInsetsMake(0, 12, 0, 15);
+        b.titleEdgeInsets = UIEdgeInsetsMake(0, 3, 0, -3);
+        b.imageEdgeInsets = UIEdgeInsetsMake(0, -3, 0, 3);
+        b.translatesAutoresizingMaskIntoConstraints = NO;
+        [b addTarget:weakSelf action:sel forControlEvents:UIControlEventTouchUpInside];
+        [card addSubview:b];
+        return b;
+    };
+    UIButton *siteButton = linkPill(@"Site", @"globe", @selector(openSite));
+    UIButton *discordButton = linkPill(@"Discord", @"bubble.left.and.bubble.right.fill", @selector(openDiscord));
+
     // Jugar
     ECPlayControl *play = [ECPlayControl new];
     play.progress = -1;
@@ -1572,6 +1606,13 @@ typedef NS_ENUM(NSInteger, ECSheetKind) {
         [chipRow.trailingAnchor constraintEqualToAnchor:chip.trailingAnchor constant:-14],
         [dot.widthAnchor constraintEqualToConstant:8],
         [dot.heightAnchor constraintEqualToConstant:8],
+
+        [siteButton.heightAnchor constraintEqualToConstant:34],
+        [siteButton.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:14],
+        [siteButton.bottomAnchor constraintEqualToAnchor:card.bottomAnchor constant:-14],
+        [discordButton.heightAnchor constraintEqualToConstant:34],
+        [discordButton.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-14],
+        [discordButton.bottomAnchor constraintEqualToAnchor:card.bottomAnchor constant:-14],
 
         // El botón de jugar va montado sobre el borde inferior de la tarjeta
         [play.widthAnchor constraintEqualToConstant:112],

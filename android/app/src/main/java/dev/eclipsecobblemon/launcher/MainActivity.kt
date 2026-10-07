@@ -115,6 +115,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
@@ -181,6 +182,10 @@ private enum class Sheet { PROFILE, SETTINGS }
 /** Servidor de la comunidad. Sin dirección todavía: la tarjeta lo indica. */
 private const val SERVER_NAME = "Eclipse Cobblemon"
 private val SERVER_ADDRESS: String? = null
+
+/** Enlaces de la comunidad (botones de la tarjeta del castillo). */
+private const val SITE_URL = "https://eclipse-cobblemon0.netlify.app/"
+private const val DISCORD_URL = "https://discord.gg/UCcXN3xqmn"
 
 class MainActivity : ComponentActivity() {
     private val vm: LauncherViewModel by viewModels()
@@ -381,6 +386,23 @@ private fun HeroCard(dim: Boolean, modifier: Modifier) {
         )
         Box(Modifier.fillMaxSize().background(Night.copy(alpha = veil)))
         ServerChip(Modifier.align(Alignment.TopCenter).padding(14.dp))
+        // Site y Discord, en las esquinas inferiores a los lados del botón de jugar
+        LinkPill(R.drawable.ic_site, "Site", SITE_URL, Modifier.align(Alignment.BottomStart).padding(14.dp))
+        LinkPill(R.drawable.ic_discord, "Discord", DISCORD_URL, Modifier.align(Alignment.BottomEnd).padding(14.dp))
+    }
+}
+
+@Composable
+private fun LinkPill(icon: Int, label: String, url: String, modifier: Modifier) {
+    val uri = LocalUriHandler.current
+    Row(
+        modifier.height(34.dp).clip(CircleShape).background(Night.copy(alpha = .62f)).border(1.dp, Hair, CircleShape)
+            .clickable { runCatching { uri.openUri(url) } }.padding(start = 12.dp, end = 15.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(painterResource(icon), null, tint = Gold, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(label, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, color = Ivory, maxLines = 1)
     }
 }
 
