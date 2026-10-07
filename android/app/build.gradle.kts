@@ -15,6 +15,8 @@ val signingProps = Properties().apply {
 android {
     namespace = "dev.eclipsecobblemon.launcher"
     compileSdk = 37
+    // El mismo NDK que Amethyst y el workflow: sin él, AGP no puede quitar los símbolos de las .so (+15 MB)
+    ndkVersion = "27.3.13750724"
 
     defaultConfig {
         applicationId = "dev.eclipsecobblemon.launcher"
