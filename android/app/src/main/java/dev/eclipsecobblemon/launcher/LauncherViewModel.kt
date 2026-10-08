@@ -115,14 +115,14 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Comprime los registos y abre el menú de partilhar del sistema. */
-    fun shareLogs(activity: Activity) = viewModelScope.launch {
+    fun shareLogs(context: android.content.Context) = viewModelScope.launch {
         log("A preparar os registos para partilhar")
         val details = listOf(
             "Memória Java: $ramMb MB · Renderer: ${renderer.label}",
             "Argumentos Java: ${jvmArgs.ifBlank { "predefinidos" }}",
         )
         runCatching { withContext(Dispatchers.IO) { LogBundle.create(getApplication(), logs.toList(), details) } }
-            .onSuccess { net.kdt.pojavlaunch.Tools.openPath(activity, it, true) }
+            .onSuccess { net.kdt.pojavlaunch.Tools.openPath(context, it, true) }
             .onFailure { log("Não foi possível preparar os registos: ${it.message}") }
     }
 

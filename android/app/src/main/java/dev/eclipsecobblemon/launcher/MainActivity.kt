@@ -1026,8 +1026,9 @@ private fun SettingsSheet(vm: LauncherViewModel) {
     }
     Spacer(Modifier.height(10.dp))
     // Registos del launcher, de Java y de Minecraft en un .zip, para mandarlos por Discord o WhatsApp
-    val activity = LocalContext.current as Activity
-    OutlineButton("Partilhar registos", Icons.Filled.Share, Modifier.fillMaxWidth()) { vm.shareLogs(activity) }
+    // Dentro del ModalBottomSheet el contexto es un ContextThemeWrapper, no la Activity
+    val context = LocalContext.current
+    OutlineButton("Partilhar registos", Icons.Filled.Share, Modifier.fillMaxWidth()) { vm.shareLogs(context) }
     Spacer(Modifier.height(10.dp))
     OutlineButton(
         "Apagar dados do Minecraft", Icons.Filled.Delete, Modifier.fillMaxWidth(),
